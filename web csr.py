@@ -26,7 +26,7 @@ def save_data(data_baru):
     return df
 
 # --- UI / TAMPILAN UTAMA ---
-st.title("🏭 Sistem Pencatatan Bantuan CSR Terpadu")
+st.title("🏭 Bantuan CSR ")
 st.markdown("---")
 
 # Membagi layar menjadi 2 kolom: Kiri (Form Input), Kanan (Data View)
@@ -141,4 +141,5 @@ st.markdown("""
     .stSelectbox > label {font-size:105%; font-weight:bold; color:#2c3e50;}
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
+
 """, unsafe_allow_html=True)
