@@ -4,6 +4,12 @@ import gspread
 from datetime import datetime
 import time 
 
+# --- INI HARUS ADA DI AWAL SKRIP ---
+if 'lokasi_manual_input' not in st.session_state:
+    st.session_state['lokasi_manual_input'] = ""
+if 'lokasi_select_state' not in st.session_state:
+    st.session_state['lokasi_select_state'] = "Tarjun" # Nilai default awal
+
 # --- KONFIGURASI KONEKSI GOOGLE SHEETS ---
 
 # Nama worksheet (tab) yang digunakan di Google Sheet Anda
@@ -57,7 +63,7 @@ with col_input:
     st.subheader("📝 Input Data Baru")
     
     # ----------------------------------------------------
-    # LOGIKA FORM INPUT (TIDAK BERUBAH)
+    # LOGIKA FORM INPUT
     # ----------------------------------------------------
     with st.form("form_csr", clear_on_submit=False):
         # 1. Tanggal
@@ -91,25 +97,35 @@ with col_input:
             "Pulau Panci", "Cantung Kiri Hilir", "Sungai Kupang", 
             "Sidomulyo", "Dusun Simpang 3 Quary", "Lainnya (Input Manual)"
         ]
-        lokasi_select = st.selectbox("Pilih Desa/Lokasi", opsi_lokasi)
+        
+        # Pilihan lokasi diikat ke session state
+        lokasi_select = st.selectbox(
+            "Pilih Desa/Lokasi", 
+            opsi_lokasi,
+            key='lokasi_select_state' 
+        )
         
         # Conditional Input untuk Lokasi Manual
         lokasi_manual = ""
         if lokasi_select == "Lainnya (Input Manual)":
-            lokasi_manual = st.text_input("Ketik Nama Desa/Lokasi Baru", placeholder="Masukkan nama lokasi...")
+            # Input manual diikat ke session state
+            lokasi_manual = st.text_input(
+                "Ketik Nama Desa/Lokasi Baru", 
+                placeholder="Masukkan nama lokasi...",
+                key='lokasi_manual_input' 
+            )
         
         # Tombol Submit
         submitted = st.form_submit_button("💾 Simpan Data")
 
     if submitted:
         # Validasi Logika Lokasi
-        lokasi_final = lokasi_manual if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
+        lokasi_final = st.session_state['lokasi_manual_input'] if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
         
         if not uraian:
             st.error("⚠️ Uraian kegiatan tidak boleh kosong.")
-        elif lokasi_select == "Lainnya (Input Manual)" and not lokasi_manual:
+        elif lokasi_select == "Lainnya (Input Manual)" and not lokasi_final:
             st.error("⚠️ Anda memilih 'Lainnya', harap ketik nama lokasi.")
-        # BARU: Validasi Jumlah harus lebih dari nol
         elif jumlah <= 0:
             st.error("⚠️ Jumlah Penerima Manfaat / Nilai harus lebih dari nol.")
         else:
@@ -117,13 +133,12 @@ with col_input:
             # LOGIKA PROSES SIMPAN BARU (MENGGUNAKAN GOOGLE SHEETS)
             # ----------------------------------------------------
             try:
-                # BARU: Tambahkan Spinner untuk UX yang lebih baik
                 with st.spinner('⏳ Menyimpan data ke Google Sheets...'):
                     client = get_gspread_client()
                     sheet = client.open_by_key(st.secrets["gcp_sheet_key"])
                     worksheet = sheet.worksheet(WORKSHEET_NAME)
                     
-                    # Data baru sebagai list. URUTAN KOLOM HARUS SAMA DENGAN HEADER GOOGLE SHEET
+                    # Data baru sebagai list
                     new_row = [
                         tanggal.strftime("%Y-%m-%d"), 
                         pilar, 
@@ -140,6 +155,12 @@ with col_input:
                     
                 # Success message dan clear cache
                 st.success(f"✅ Data untuk lokasi **{lokasi_final}** berhasil disimpan ke Google Sheets!")
+
+                # --- PERUBAHAN UTAMA UNTUK MEMPERTAHANKAN INPUT MANUAL ---
+                # HANYA reset lokasi selectbox ke default
+                st.session_state['lokasi_select_state'] = "Tarjun" 
+                # NILAI st.session_state['lokasi_manual_input'] TIDAK DIHAPUS, sehingga nilainya tetap
+                
                 load_data.clear() # Clear cache agar data Monitoring diperbarui
                 time.sleep(1)
                 st.rerun() # Refresh aplikasi
@@ -157,13 +178,12 @@ with col_view:
     
     if not df.empty:
         
-        # BARU: Logika Gabungan Kolom untuk Tampilan dengan format Rupiah
+        # Logika Gabungan Kolom untuk Tampilan dengan format Rupiah
         if 'Jumlah' in df.columns and 'Satuan' in df.columns:
             def format_jumlah(row):
                 if row['Satuan'] == 'Rupiah':
                     try:
                         # Format angka besar dengan pemisah ribuan (menggunakan titik)
-                        # Pastikan 'Jumlah' adalah numerik
                         return f"Rp {int(row['Jumlah']):,.0f}".replace(",", "_").replace(".", ",").replace("_", ".")
                     except:
                         # Fallback jika konversi gagal
@@ -171,7 +191,7 @@ with col_view:
                 else:
                     return f"{row['Jumlah']} {row['Satuan']}"
             
-            df['Jumlah Manfaat'] = df.apply(format_jumlah, axis=1) # Gunakan apply untuk format
+            df['Jumlah Manfaat'] = df.apply(format_jumlah, axis=1) 
         else:
             st.warning("Kolom 'Jumlah' atau 'Satuan' tidak ditemukan di Google Sheet.")
             df['Jumlah Manfaat'] = ""
@@ -184,7 +204,6 @@ with col_view:
             df_filtered = df
             
         # Tampilkan Tabel
-        # Definisikan Kolom Tampilan
         kolom_tampilan = [
             "Tanggal", 
             "Pilar", 
@@ -203,13 +222,6 @@ with col_view:
         # Statistik Ringkas
         st.info(f"Total Transaksi: {len(df_filtered)} | Total Lokasi Terjangkau: {df_filtered['Lokasi'].nunique()}")
         
-        # Tombol Download Excel/CSV
-        csv = df_filtered.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Laporan (CSV)",
-            data=csv,
-            file_name='laporan_csr_filtered.csv',
-            mime='text/csv',
         )
     else:
         st.info("Belum ada data yang tersimpan. Silakan input data di kolom sebelah kiri.")
