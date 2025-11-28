@@ -169,7 +169,7 @@ with col_input:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Pastikan Service Account memiliki izin Editor. Error: {e}")
 
 with col_view:
-    st.subheader("📊 Monitoring Data Real-time")
+    st.subheader("📊 Monitoring data")
     
     # ----------------------------------------------------
     # LOGIKA LOAD DATA BARU (MENGGUNAKAN GOOGLE SHEETS)
@@ -228,8 +228,7 @@ with col_view:
             label="📥 Download Laporan (CSV)",
             data=csv,
             file_name='laporan_csr_filtered.csv',
-            mime='text/csv',
-        )
+            mime='text/csv', )
     else:
         st.info("Belum ada data yang tersimpan. Silakan input data di kolom sebelah kiri.")
 
@@ -242,3 +241,4 @@ st.markdown("""
 </style>
 
 """, unsafe_allow_html=True)
+
