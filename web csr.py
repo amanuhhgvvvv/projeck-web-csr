@@ -222,13 +222,14 @@ with col_view:
         # Statistik Ringkas
         st.info(f"Total Transaksi: {len(df_filtered)} | Total Lokasi Terjangkau: {df_filtered['Lokasi'].nunique()}")
         
-        # Tombol Download Excel/CSV
-        csv = df_filtered.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Download Laporan (CSV)",
-            data=csv,
-            file_name='laporan_csr_filtered.csv',
-            mime='text/csv', )
+       # Tombol Download Excel/CSV
+csv = df_filtered.to_csv(index=False).encode('utf-8')
+st.download_button(
+    label="📥 Download Laporan (CSV)",
+    data=csv,
+    file_name='laporan_csr_filtered.csv',
+    mime='text/csv',
+) # Hanya satu kurung tutup, dan tidak ada koma setelah 'text/csv'
     else:
         st.info("Belum ada data yang tersimpan. Silakan input data di kolom sebelah kiri.")
 
@@ -241,4 +242,5 @@ st.markdown("""
 </style>
 
 """, unsafe_allow_html=True)
+
 
