@@ -53,6 +53,9 @@ def load_data():
 
         data = worksheet.get_all_records()
         df = pd.DataFrame(data)
+        kolom_hapus = [col for col in df.columns if 'Unnamed:' in col or col == '']
+        if kolom_hapus:
+            df = df.drop(columns=kolom_hapus)
 
         if "Tanggal" in df.columns:
             df["Tanggal"] = pd.to_datetime(df["Tanggal"], errors='coerce').dt.date
@@ -206,6 +209,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
