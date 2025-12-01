@@ -93,7 +93,7 @@ with col_input:
 
         c1, c2 = st.columns([2, 1])
         with c1:
-            jumlah = st.number_input("Jumlah yang diterima / Nilai", min_value=-1, step=1)
+            jumlah = st.number_input("Jumlah yang diterima / Nilai", min_value=0, step=1)
         with c2:
             satuan = st.selectbox("Satuan", ["0", "Rupiah", "Ton", "Sak", "Paket", "Unit"])
 
@@ -206,6 +206,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
