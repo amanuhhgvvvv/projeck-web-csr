@@ -110,7 +110,7 @@ with col_input:
         with c1:
             jumlah = st.number_input("Jumlah yang diterima / Nilai", min_value=0, step=1)
         with c2:
-            satuan = st.selectbox("Satuan", ["-", "Rupiah", "Ton", "Sak", "Paket", "Unit"])
+            satuan = st.selectbox("Satuan", ["-", "Rupiah", "Ton", "Sak", "Paket", "Unit", "liter", "buah"])
 
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
@@ -168,6 +168,7 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
         
+
 
 
 
