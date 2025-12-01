@@ -51,6 +51,7 @@ def load_data():
         sheet = client.open_by_key(SHEET_ID)
         sheet = client.open_by_key(st.secrets["SHEET_ID"])
         sheet = client.open_by_key(SHEET_ID)
+        sheet = client.open_by_key(SHEET_ID)
 
 # 🔍 Debug: lihat semua nama worksheet
 st.write("Worksheet ditemukan:", [ws.title for ws in sheet.worksheets()])
@@ -212,6 +213,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
