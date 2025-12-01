@@ -17,6 +17,10 @@ WORKSHEET_NAME = "CSR"
 
 @st.cache_resource(ttl=3600)
 def get_gspread_client():
+    client = get_gspread_client()
+sheet = client.open_by_key(st.secrets["SHEET_ID"])
+st.write("Daftar worksheet:", sheet.worksheets())
+
     """Menginisialisasi koneksi ke Google Sheets menggunakan struktur secret baru."""
     try:
         creds = {
@@ -222,6 +226,7 @@ st.markdown("""
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
