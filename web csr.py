@@ -143,7 +143,6 @@ with col_input:
 
                 st.success(f"✅ Data untuk lokasi **{lokasi_final}** berhasil disimpan!")
 
-                st.session_state["lokasi_select_state"] = "Tarjun"
                 load_data.clear()
                 time.sleep(1)
                 st.rerun()
@@ -159,6 +158,7 @@ with col_input:
 
 
         
+
 
 
 
