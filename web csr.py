@@ -152,9 +152,6 @@ with col_input:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
 
 
-        # --- HAPUS FILTER PILAR ---
-        df_filtered = df
-
         kolom_urut = [
             "Tanggal", "Pilar", "Jenis Bantuan", "Uraian Kegiatan",
             "Jumlah Manfaat", "Lokasi"
@@ -185,4 +182,5 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
