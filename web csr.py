@@ -48,6 +48,11 @@ def get_gspread_client():
 def load_data():
     try:
         client = get_gspread_client()
+        sheet = client.open_by_key(SHEET_ID)
+
+# 🔍 Debug: lihat semua nama worksheet
+st.write("Worksheet ditemukan:", [ws.title for ws in sheet.worksheets()])
+
         sheet = client.open_by_key(st.secrets["SHEET_ID"])
         worksheet = sheet.worksheet(WORKSHEET_NAME)
 
@@ -206,5 +211,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
