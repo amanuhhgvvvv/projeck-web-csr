@@ -3,8 +3,7 @@ import pandas as pd
 import gspread
 from datetime import datetime
 import time 
-st.cache_data.clear()
-st.cache_resource.clear()
+
 # --- INI HARUS ADA DI AWAL SKRIP ---
 if 'lokasi_manual_input' not in st.session_state:
     st.session_state['lokasi_manual_input'] = ""
@@ -223,6 +222,7 @@ st.markdown("""
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
