@@ -48,13 +48,10 @@ def get_gspread_client():
 def load_data():
     try:
         client = get_gspread_client()
-        sheet = client.open_by_key(SHEET_ID)
         sheet = client.open_by_key(st.secrets["SHEET_ID"])
-        sheet = client.open_by_key(SHEET_ID)
-        sheet = client.open_by_key(SHEET_ID)
 
-# 🔍 Debug: lihat semua nama worksheet
-st.write("Worksheet ditemukan:", [ws.title for ws in sheet.worksheets()])
+        # 🔍 DEBUG: cek semua worksheet di Google Sheet
+        st.write("Worksheet ditemukan:", [ws.title for ws in sheet.worksheets()])
 
         worksheet = sheet.worksheet(WORKSHEET_NAME)
 
@@ -69,6 +66,7 @@ st.write("Worksheet ditemukan:", [ws.title for ws in sheet.worksheets()])
     except Exception as e:
         st.error(f"Gagal memuat data dari Google Sheets. Error: {e}")
         return pd.DataFrame()
+
 
 # --- UI ---
 st.set_page_config(page_title="Sistem Pencatatan CSR", layout="wide")
@@ -213,6 +211,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
