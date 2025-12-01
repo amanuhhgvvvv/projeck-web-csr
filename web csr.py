@@ -17,8 +17,7 @@ WORKSHEET_NAME = "CSR"
 
 @st.cache_resource(ttl=3600)
 def get_gspread_client():
-    client = get_gspread_client() 
-             """Menginisialisasi koneksi ke Google Sheets menggunakan struktur secret baru."""
+    """Menginisialisasi koneksi ke Google Sheets menggunakan struktur secret baru."""
     try:
         creds = {
             "type": "service_account",
@@ -223,6 +222,7 @@ st.markdown("""
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
