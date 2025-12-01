@@ -4,7 +4,6 @@ import gspread
 from datetime import datetime
 import time
 from google.oauth2.service_account import Credentials
-st.write("Secrets keys:", list(st.secrets.keys()))
 
 # --- SESSION STATE ---
 if 'lokasi_manual_input' not in st.session_state:
@@ -207,4 +206,5 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
