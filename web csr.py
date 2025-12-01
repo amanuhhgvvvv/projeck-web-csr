@@ -157,7 +157,6 @@ with col_input:
             "Jumlah Manfaat", "Lokasi"
         ]
 
-        kolom_ada = [k for k in kolom_urut if k in df_filtered.columns]
 
         st.dataframe(df_filtered[kolom_ada], use_container_width=True, hide_index=True)
 
@@ -182,5 +181,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
