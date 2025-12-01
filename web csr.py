@@ -72,7 +72,7 @@ def load_data():
 
 # --- UI ---
 st.set_page_config(page_title="Sistem Pencatatan CSR", layout="wide")
-st.title("🏭 Bantuan CSR")
+st.title("🏭 Bantuan CSR itp p-12 tarjun")
 st.markdown("---")
 
 col_input, col_view = st.columns([1, 1.5])
@@ -168,6 +168,7 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
         
+
 
 
 
