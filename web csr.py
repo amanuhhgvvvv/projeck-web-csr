@@ -59,6 +59,7 @@ def load_data():
         return pd.DataFrame()
 
 
+
 # --- UI / TAMPILAN UTAMA ---
 st.set_page_config(page_title="Sistem Pencatatan CSR", layout="wide")
 st.title("🏭 Bantuan CSR")
@@ -221,6 +222,7 @@ st.markdown("""
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
