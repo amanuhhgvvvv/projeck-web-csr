@@ -13,7 +13,7 @@ if 'lokasi_select_state' not in st.session_state:
 # --- KONFIGURASI KONEKSI GOOGLE SHEETS ---
 
 # Nama worksheet (tab) yang digunakan di Google Sheet Anda
-WORKSHEET_NAME = "Sheet1" 
+WORKSHEET_NAME = "CSR" 
 
 @st.cache_resource(ttl=3600)
 def get_gspread_client():
@@ -222,6 +222,7 @@ st.markdown("""
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
