@@ -167,70 +167,7 @@ with col_input:
 
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
-
-# --------------------------
-# TAMPILAN DATA
-# --------------------------
-with col_view:
-    st.subheader("📊 Data Kegiatan CSR")
-    
-    df_csr = load_data()
-
-    if not df_csr.empty:
-        total_data = len(df_csr)
-        st.info(f"Total **{total_data}** data tercatat.")
-
-        # Menentukan Kolom yang digunakan untuk Filtering
-        kolom_filter = ["Pilar", "Lokasi", "Jenis Bantuan"]
-        filter_dict = {}
-
-        # Membuat filter dinamis
-        with st.expander("Filter Data"):
-            filter_cols = st.columns(len(kolom_filter))
-            
-            for i, col_name in enumerate(kolom_filter):
-                if col_name in df_csr.columns:
-                    unique_options = ["Semua"] + list(df_csr[col_name].unique())
-                    filter_dict[col_name] = filter_cols[i].selectbox(
-                        f"Pilih {col_name}",
-                        unique_options
-                    )
-
-        df_tampil = df_csr.copy()
-        
-        # Menerapkan Filter
-        for col_name, selected_value in filter_dict.items():
-            if selected_value != "Semua":
-                df_tampil = df_tampil[df_tampil[col_name] == selected_value]
-        
-        # Mengganti nama kolom untuk tampilan yang lebih rapi (jika perlu)
-        df_tampil = df_tampil.rename(columns={'Uraian Kegiatan': 'Uraian'})
-        
-        # Memastikan urutan kolom sesuai yang diinginkan pengguna
-        kolom_tampil = [
-            "Tanggal", "Pilar", "Lokasi", "Jenis Bantuan", "Uraian", 
-            "Jumlah", "Satuan"
-        ]
-        
-        # Hanya tampilkan kolom yang ada di DataFrame
-        kolom_tampil_final = [col for col in kolom_tampil if col in df_tampil.columns]
-
-        st.markdown(f"**{len(df_tampil)} data** yang cocok dengan filter:")
-        st.dataframe(
-            df_tampil[kolom_tampil_final],
-            use_container_width=True,
-            hide_index=True
-        )
-        
-        # Opsi Download Data
-        csv = df_tampil.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="⬇️ Download Data sebagai CSV",
-            data=csv,
-            file_name='data_csr_filtered.csv',
-            mime='text/csv',
-            key='download-csv'
-        )
         
     else:
         st.warning("Belum ada data yang tercatat atau gagal memuat data. Mohon cek koneksi Google Sheets Anda.")
+
