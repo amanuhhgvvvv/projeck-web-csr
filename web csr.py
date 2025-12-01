@@ -17,14 +17,26 @@ WORKSHEET_NAME = "Sheet1"
 
 @st.cache_resource(ttl=3600)
 def get_gspread_client():
-    """Menginisialisasi koneksi ke Google Sheets menggunakan st.secrets."""
+    """Menginisialisasi koneksi ke Google Sheets menggunakan struktur secret baru."""
     try:
-        # Menggunakan st.secrets.gcp_service_account (disimpan sebagai TOML)
-        creds = st.secrets["gcp_service_account"]
+        creds = {
+            "type": "service_account",
+            "project_id": st.secrets["project_id"],
+            "private_key_id": st.secrets["private_key_id"],
+            "private_key": st.secrets["private_key"],
+            "client_email": st.secrets["client_email"],
+            "client_id": st.secrets["client_id"],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_x509_cert_url": st.secrets["client_x509_cert_url"]
+        }
+
         client = gspread.service_account_from_dict(creds)
         return client
+
     except Exception as e:
-        st.error(f"Gagal menginisialisasi koneksi Google Sheets. Pastikan Secrets sudah benar dan Service Account sudah diaktifkan. Error: {e}")
+        st.error(f"Gagal menginisialisasi koneksi Google Sheets. Error: {e}")
         st.stop()
 
 @st.cache_data(ttl="10m")
@@ -32,8 +44,8 @@ def load_data():
     """Memuat semua data dari Google Sheet ke dalam DataFrame Pandas."""
     client = get_gspread_client()
     try:
-        # Menggunakan ID Sheet dari st.secrets.gcp_sheet_key
-        sheet_id = st.secrets["gcp_sheet_key"]
+        # Menggunakan ID Sheet dari st.secrets["SHEET_ID"]
+        sheet_id = st.secrets["SHEET_ID"]
         sheet = client.open_by_key(sheet_id)
         worksheet = sheet.worksheet(WORKSHEET_NAME) 
         
@@ -47,7 +59,7 @@ def load_data():
 
         return df
     except Exception as e:
-        st.error(f"Gagal memuat data dari Google Sheets. Pastikan ID Sheet dan izin Service Account sudah benar. Error: {e}")
+        st.error(f"Gagal memuat data dari Google Sheets. Error: {e}")
         return pd.DataFrame()
 
 
@@ -108,7 +120,6 @@ with col_input:
         # Conditional Input untuk Lokasi Manual
         lokasi_manual = ""
         if lokasi_select == "Lainnya (Input Manual)":
-            # Input manual diikat ke session state
             lokasi_manual = st.text_input(
                 "Ketik Nama Desa/Lokasi Baru", 
                 placeholder="Masukkan nama lokasi...",
@@ -119,7 +130,6 @@ with col_input:
         submitted = st.form_submit_button("💾 Simpan Data")
 
     if submitted:
-        # Validasi Logika Lokasi
         lokasi_final = st.session_state['lokasi_manual_input'] if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
         
         if not uraian:
@@ -129,13 +139,10 @@ with col_input:
         elif jumlah <= 0:
             st.error("⚠️ Jumlah Penerima Manfaat / Nilai harus lebih dari nol.")
         else:
-            # ----------------------------------------------------
-            # LOGIKA PROSES SIMPAN BARU (MENGGUNAKAN GOOGLE SHEETS)
-            # ----------------------------------------------------
             try:
                 with st.spinner('⏳ Menyimpan data ke Google Sheets...'):
                     client = get_gspread_client()
-                    sheet = client.open_by_key(st.secrets["gcp_sheet_key"])
+                    sheet = client.open_by_key(st.secrets["SHEET_ID"])
                     worksheet = sheet.worksheet(WORKSHEET_NAME)
                     
                     # Data baru sebagai list
@@ -147,46 +154,35 @@ with col_input:
                         jumlah, 
                         satuan, 
                         lokasi_final, 
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S") # Input Waktu
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     ]
                     
-                    # Kirim data ke baris baru di Google Sheets
                     worksheet.append_row(new_row)
                     
-                # Success message dan clear cache
                 st.success(f"✅ Data untuk lokasi **{lokasi_final}** berhasil disimpan ke Google Sheets!")
 
-                # --- PERUBAHAN UTAMA UNTUK MEMPERTAHANKAN INPUT MANUAL ---
-                # HANYA reset lokasi selectbox ke default
-                st.session_state['lokasi_select_state'] = "Tarjun" 
-                # NILAI st.session_state['lokasi_manual_input'] TIDAK DIHAPUS, sehingga nilainya tetap
+                st.session_state['lokasi_select_state'] = "Tarjun"
                 
-                load_data.clear() # Clear cache agar data Monitoring diperbarui
+                load_data.clear()
                 time.sleep(1)
-                st.rerun() # Refresh aplikasi
+                st.rerun()
                 
             except Exception as e:
-                st.error(f"Gagal menyimpan data ke Google Sheets. Pastikan Service Account memiliki izin Editor. Error: {e}")
+                st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
 
 with col_view:
     st.subheader("📊 Monitoring data")
     
-    # ----------------------------------------------------
-    # LOGIKA LOAD DATA BARU (MENGGUNAKAN GOOGLE SHEETS)
-    # ----------------------------------------------------
     df = load_data()
     
     if not df.empty:
         
-        # Logika Gabungan Kolom untuk Tampilan dengan format Rupiah
         if 'Jumlah' in df.columns and 'Satuan' in df.columns:
             def format_jumlah(row):
                 if row['Satuan'] == 'Rupiah':
                     try:
-                        # Format angka besar dengan pemisah ribuan (menggunakan titik)
                         return f"Rp {int(row['Jumlah']):,.0f}".replace(",", "_").replace(".", ",").replace("_", ".")
                     except:
-                        # Fallback jika konversi gagal
                         return f"{row['Jumlah']} {row['Satuan']}"
                 else:
                     return f"{row['Jumlah']} {row['Satuan']}"
@@ -196,43 +192,36 @@ with col_view:
             st.warning("Kolom 'Jumlah' atau 'Satuan' tidak ditemukan di Google Sheet.")
             df['Jumlah Manfaat'] = ""
             
-        # Fitur Filter Sederhana
         filter_pilar = st.multiselect("Filter berdasarkan Pilar:", df["Pilar"].unique())
         if filter_pilar:
             df_filtered = df[df["Pilar"].isin(filter_pilar)]
         else:
             df_filtered = df
             
-        # Tampilkan Tabel
         kolom_tampilan = [
             "Tanggal", 
             "Pilar", 
             "Jenis Bantuan", 
             "Uraian Kegiatan", 
-            "Jumlah Manfaat", # Kolom Gabungan
+            "Jumlah Manfaat",
             "Lokasi", 
             "Input Waktu"
         ]
         
-        # Pastikan kolom ada sebelum ditampilkan
-        kolom_ada = [col for col in kolom_tampilan if col in df_filtered.columns]
+        kolom_ada = [col for col in df_filtered.columns if col in kolom_tampilan]
         
         st.dataframe(df_filtered[kolom_ada], use_container_width=True, hide_index=True)
         
-        # Statistik Ringkas
         st.info(f"Total Transaksi: {len(df_filtered)} | Total Lokasi Terjangkau: {df_filtered['Lokasi'].nunique()}")
         
+    else:
         st.info("Belum ada data yang tersimpan. Silakan input data di kolom sebelah kiri.")
 
-# --- CSS Customization (Tidak Berubah) ---
+# --- CSS Customization ---
 st.markdown("""
 <style>
     .stTextInput > label {font-size:105%; font-weight:bold; color:#2c3e50;}
     .stSelectbox > label {font-size:105%; font-weight:bold; color:#2c3e50;}
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
-
 """, unsafe_allow_html=True)
-
-
-
