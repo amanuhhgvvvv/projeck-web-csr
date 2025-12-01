@@ -168,6 +168,6 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
         
-    else:
-        st.warning("Belum ada data yang tercatat atau gagal memuat data. Mohon cek koneksi Google Sheets Anda.")
+
+
 
