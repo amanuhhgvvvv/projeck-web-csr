@@ -44,7 +44,6 @@ def load_data():
     """Memuat semua data dari Google Sheet ke dalam DataFrame Pandas."""
     client = get_gspread_client()
     try:
-       try:
     SHEET_ID = st.secrets["SHEET_ID"]
 except Exception as e:
     st.error(f"❌ Gagal mengambil SHEET_ID dari secrets. Periksa 'secrets.toml'. Error: {e}")
@@ -226,6 +225,7 @@ st.markdown("""
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
