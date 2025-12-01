@@ -41,23 +41,19 @@ def get_gspread_client():
 
 @st.cache_data(ttl="10m")
 def load_data():
-    """Memuat semua data dari Google Sheet ke dalam DataFrame Pandas."""
     client = get_gspread_client()
     try:
-    SHEET_ID = st.secrets["SHEET_ID"]
-except Exception as e:
-    st.error(f"❌ Gagal mengambil SHEET_ID dari secrets. Periksa 'secrets.toml'. Error: {e}")
-    st.stop()
-        
-        # Ambil semua record sebagai list of dictionaries (baris pertama dianggap header)
+        SHEET_ID = st.secrets["SHEET_ID"]
+        sheet = client.open_by_key(SHEET_ID)
+        worksheet = sheet.worksheet(WORKSHEET_NAME)
         data = worksheet.get_all_records()
         df = pd.DataFrame(data)
-        
-        # Konversi Tanggal
+
         if 'Tanggal' in df.columns:
             df['Tanggal'] = pd.to_datetime(df['Tanggal'], errors='coerce').dt.date
 
         return df
+
     except Exception as e:
         st.error(f"Gagal memuat data dari Google Sheets. Error: {e}")
         return pd.DataFrame()
