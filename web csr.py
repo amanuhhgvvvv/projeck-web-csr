@@ -151,29 +151,6 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
 
-# --------------------------
-# VIEW DATA
-# --------------------------
-with col_view:
-    st.subheader("📊 Monitoring Data")
-
-    df = load_data()
-
-    if not df.empty:
-
-        if "Jumlah" in df.columns and "Satuan" in df.columns:
-            def format_jumlah(row):
-                if row["Satuan"] == "Rupiah":
-                    try:
-                        return f"Rp {int(row['Jumlah']):,}".replace(",", ".")
-                    except:
-                        return f"{row['Jumlah']} Rupiah"
-                else:
-                    return f"{row['Jumlah']} {row['Satuan']}"
-
-            df["Jumlah Manfaat"] = df.apply(format_jumlah, axis=1)
-        else:
-            df["Jumlah Manfaat"] = ""
 
         # --- HAPUS FILTER PILAR ---
         df_filtered = df
@@ -208,3 +185,4 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
