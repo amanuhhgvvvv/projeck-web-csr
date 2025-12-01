@@ -95,7 +95,7 @@ with col_input:
         with c1:
             jumlah = st.number_input("Jumlah yang diterima / Nilai", min_value=0, step=1)
         with c2:
-            satuan = st.selectbox("Satuan", ["0", "Rupiah", "Ton", "Sak", "Paket", "Unit"])
+            satuan = st.selectbox("Satuan", ["-", "Rupiah", "Ton", "Sak", "Paket", "Unit"])
 
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
@@ -206,6 +206,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
