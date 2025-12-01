@@ -49,10 +49,6 @@ def load_data():
     try:
         client = get_gspread_client()
         sheet = client.open_by_key(st.secrets["SHEET_ID"])
-
-        # 🔍 DEBUG: cek semua worksheet di Google Sheet
-        st.write("Worksheet ditemukan:", [ws.title for ws in sheet.worksheets()])
-
         worksheet = sheet.worksheet(WORKSHEET_NAME)
 
         data = worksheet.get_all_records()
@@ -211,6 +207,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
