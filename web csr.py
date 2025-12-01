@@ -179,7 +179,7 @@ with col_view:
 
         kolom_urut = [
             "Tanggal", "Pilar", "Jenis Bantuan", "Uraian Kegiatan",
-            "Jumlah Manfaat", "Lokasi", "Input Waktu"
+            "Jumlah Manfaat", "Lokasi" 
         ]
 
         kolom_ada = [k for k in kolom_urut if k in df_filtered.columns]
@@ -207,6 +207,7 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 
