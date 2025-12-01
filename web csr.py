@@ -158,29 +158,7 @@ with col_input:
         ]
 
 
-        st.dataframe(df_filtered[kolom_ada], use_container_width=True, hide_index=True)
-
-        st.info(f"Total Transaksi: {len(df_filtered)} | Lokasi Terjangkau: {df_filtered['Lokasi'].nunique()}")
-
-    else:
-        st.info("Belum ada data tersimpan.")
-
-# --- CSS ---
-st.markdown("""
-<style>
-    div[data-testid="stForm"] {
-        background-color: #f8f9fa;
-        padding: 20px;
-        border-radius: 10px;
-        border: 1px solid #ddd;
-    }
-    .stTextInput > label, .stSelectbox > label {
-        font-size: 105%;
-        font-weight: bold;
-        color: #2c3e50;
-    }
-</style>
-""", unsafe_allow_html=True)
+        
 
 
 
