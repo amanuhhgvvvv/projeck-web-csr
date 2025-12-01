@@ -46,7 +46,7 @@ def load_data():
     try:
         # Menggunakan ID Sheet dari st.secrets["SHEET_ID"]
         sheet_id = st.secrets["SHEET_ID"]
-        sheet = client.open_by_url(sheet_url)
+        sheet = client.open_by_id(sheet_id)
         worksheet = sheet.worksheet(WORKSHEET_NAME) 
         
         # Ambil semua record sebagai list of dictionaries (baris pertama dianggap header)
@@ -225,4 +225,5 @@ st.markdown("""
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
 """, unsafe_allow_html=True)
+
 
