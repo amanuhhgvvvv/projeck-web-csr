@@ -66,7 +66,6 @@ def load_data():
         st.error(f"Gagal memuat data dari Google Sheets. Error: {e}")
         return pd.DataFrame()
 
-
 # --- UI ---
 st.set_page_config(page_title="Sistem Pencatatan CSR", layout="wide")
 st.title("🏭 Bantuan CSR")
@@ -138,7 +137,6 @@ with col_input:
                         jumlah,
                         satuan,
                         lokasi_final,
-                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     ]
 
                     worksheet.append_row(new_row)
@@ -177,12 +175,13 @@ with col_view:
         else:
             df["Jumlah Manfaat"] = ""
 
-        filter_pilar = st.multiselect("Filter berdasarkan Pilar:", df["Pilar"].unique())
-        df_filtered = df[df["Pilar"].isin(filter_pilar)] if filter_pilar else df
+        # --- HAPUS FILTER PILAR ---
+        df_filtered = df
 
         kolom_urut = [
             "Tanggal", "Pilar", "Jenis Bantuan", "Uraian Kegiatan",
-            "Jumlah Manfaat", "Lokasi" ]
+            "Jumlah Manfaat", "Lokasi"
+        ]
 
         kolom_ada = [k for k in kolom_urut if k in df_filtered.columns]
 
@@ -209,18 +208,3 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
