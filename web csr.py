@@ -21,9 +21,9 @@ def get_gspread_client():
     try:
         creds = {
             "type": "service_account",
-            "project_id": st.secrets["water-monitor-app-474703"],
-            "private_key_id": st.secrets["63df0654ae0b68feec237efa3fc34174d7473904"],
-            "private_key": st.secrets[""],
+            "project_id": st.secrets["project_id"],
+            "private_key_id": st.secrets["private_key_id"],
+            "private_key": st.secrets["private_key"],
             "client_email": st.secrets["client_email"],
             "client_id": st.secrets["client_id"],
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -225,4 +225,3 @@ st.markdown("""
     div[data-testid="stForm"] {background-color: #f8f9fa; padding: 20px; border-radius: 10px; border: 1px solid #ddd;}
 </style>
 """, unsafe_allow_html=True)
-
