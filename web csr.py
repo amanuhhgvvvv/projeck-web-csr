@@ -98,7 +98,7 @@ with col_input:
             "Keamanan", "SDP", "Donation Cash", "Donation Goods",
             "Public Relation Business", "Entertainment Business"
         ]
-        pilar = st.selectbox("Pilih Pilar CSR", opsi_pilar)
+        pilar = st.selectbox("Pilih Pilar", opsi_pilar)
         
         # REVISI 2.1: Tambahkan KEY pada st.radio agar nilainya tersedia di Session State
         jenis_bantuan = st.radio(
@@ -211,4 +211,5 @@ with col_view:
         st.dataframe(df_data, use_container_width=True, hide_index=True)
     else:
         st.info("Belum ada data untuk ditampilkan.")
+
 
