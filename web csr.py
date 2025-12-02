@@ -10,6 +10,9 @@ if 'lokasi_manual_input' not in st.session_state:
     st.session_state['lokasi_manual_input'] = ""
 if 'lokasi_select_state' not in st.session_state:
     st.session_state['lokasi_select_state'] = "Tarjun"
+# Tambahan: Inisialisasi state untuk input manual jenis bantuan
+if 'jenis_bantuan_manual_input' not in st.session_state:
+    st.session_state['jenis_bantuan_manual_input'] = ""
 
 # --- KONFIGURASI ---
 WORKSHEET_NAME = "CSR"
@@ -92,31 +95,29 @@ with col_input:
             "Public Relation Business", "Entertainment Business"
         ]
         pilar = st.selectbox("Pilih Pilar CSR", opsi_pilar)
+        
+        # REVISI 2.1: Tambahkan KEY pada st.radio agar nilainya tersedia di Session State
+        jenis_bantuan = st.radio(
+            "Jenis Bantuan", 
+            ["Uang", "Semen / Material", "Lainnya"], 
+            horizontal=True,
+            key="jenis_bantuan_key" 
+        )
 
-        jenis_bantuan = st.radio("Jenis Bantuan", ["Uang", "Semen / Material", "Lainnya"], horizontal=True)
-
-        # Logika input manual untuk Jenis Bantuan
-        jenis_bantuan_manual = ""
-        if jenis_bantuan == "Lainnya":
-            jenis_bantuan_manual = st.text_input("Ketik Jenis Bantuan Lainnya", placeholder="Contoh: Beras, Kursi, Peralatan Kebersihan")
-
-        # Menentukan nilai final untuk Jenis Bantuan
-        jenis_bantuan_final = jenis_bantuan_manual if jenis_bantuan == "Lainnya" else jenis_bantuan
-
+        # HAPUS LOGIKA LAMA untuk jenis_bantuan_manual dari dalam form
 
         uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan detail kegiatan...")
 
         c1, c2 = st.columns([2, 1])
         with c1:
-            # --- BAGIAN YANG DIREVISI UNTUK DESIMAL ---
+            # REVISI 1: Menerima Bilangan Desimal (Float)
             jumlah = st.number_input(
                 "Jumlah yang diterima / Nilai", 
                 min_value=0.0, 
-                value=0.0,          # Mengatur nilai awal menjadi float
-                step=0.01,          # Mengatur step menjadi desimal
-                format="%.2f"       # Format tampilan dua desimal
+                value=0.0,          
+                step=0.01,         
+                format="%.2f"      
             )
-            # ------------------------------------------
         with c2:
             satuan = st.selectbox("Satuan", ["-", "Ton", "Sak", "Paket", "Unit", "liter", "buah", "juta"])
 
@@ -133,17 +134,39 @@ with col_input:
             lokasi_manual = st.text_input("Ketik Nama Lokasi Baru", key="lokasi_manual_input")
 
         submitted = st.form_submit_button("💾 Simpan Data")
+        
+    # ----------------------------------------------------------------------
+    # REVISI 2.2: Pindahkan Input Manual Keluar dari Form untuk Real-Time
+    # ----------------------------------------------------------------------
+    jenis_bantuan_manual = ""
+    if st.session_state.get("jenis_bantuan_key") == "Lainnya":
+        # Gunakan key untuk menyimpan input manual di Session State
+        jenis_bantuan_manual = st.text_input(
+            "Ketik Jenis Bantuan Lainnya", 
+            placeholder="Contoh: Beras, Kursi, Peralatan Kebersihan",
+            key="jenis_bantuan_manual_input" 
+        )
+    # ----------------------------------------------------------------------
+
 
     if submitted:
         lokasi_final = lokasi_manual if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
+        
+        # REVISI 2.3: Ambil nilai final jenis bantuan dari Session State
+        if st.session_state.jenis_bantuan_key == "Lainnya":
+            jenis_bantuan_final = st.session_state.get("jenis_bantuan_manual_input", "")
+        else:
+            jenis_bantuan_final = st.session_state.jenis_bantuan_key
+        # ----------------------------------------------------------
 
         # Validasi Input
         if not uraian:
             st.error("⚠️ Uraian tidak boleh kosong.")
         elif lokasi_select == "Lainnya (Input Manual)" and not lokasi_final:
             st.error("⚠️ Lokasi manual belum diisi.")
-        elif jenis_bantuan == "Lainnya" and not jenis_bantuan_manual:
-             st.error("⚠️ Jenis Bantuan Lainnya belum diisi.")
+        # REVISI 2.4: Validasi untuk input manual yang baru
+        elif st.session_state.jenis_bantuan_key == "Lainnya" and not jenis_bantuan_final:
+            st.error("⚠️ Jenis Bantuan Lainnya belum diisi.")
         elif jumlah <= 0:
             st.error("⚠️ Jumlah harus lebih dari nol.")
         else:
@@ -157,7 +180,7 @@ with col_input:
                     new_row = [
                         tanggal.strftime("%Y-%m-%d"),
                         pilar,
-                        jenis_bantuan_final,  # Menggunakan nilai final
+                        jenis_bantuan_final,  # Menggunakan nilai final yang sudah di-update
                         uraian,
                         jumlah,               # Nilai ini sekarang bertipe float/desimal
                         satuan,
@@ -184,6 +207,10 @@ df_data = load_data()
 with col_view:
     st.subheader("📊 Data Kegiatan CSR Terakhir")
     if not df_data.empty:
-        st.dataframe(df_data, use_container_width=True, hide_index=True)
+        # Tambahkan kondisi jika df_data tidak memiliki kolom yang diharapkan, untuk menghindari error di st.dataframe
+        if all(col in df_data.columns for col in ["Tanggal", "Pilar", "Lokasi"]):
+            st.dataframe(df_data, use_container_width=True, hide_index=True)
+        else:
+            st.dataframe(df_data, use_container_width=True, hide_index=True) # Tampilkan apa adanya jika kolom tidak lengkap
     else:
         st.info("Belum ada data untuk ditampilkan.")
