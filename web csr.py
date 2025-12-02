@@ -10,9 +10,9 @@ if 'lokasi_manual_input' not in st.session_state:
     st.session_state['lokasi_manual_input'] = ""
 if 'lokasi_select_state' not in st.session_state:
     st.session_state['lokasi_select_state'] = "Tarjun"
-# Tambahan: Inisialisasi state untuk input manual jenis bantuan
-if 'jenis_bantuan_manual_input' not in st.session_state:
-    st.session_state['jenis_bantuan_manual_input'] = ""
+# Inisialisasi tambahan untuk memastikan key jenis bantuan ada
+if 'jenis_bantuan_key' not in st.session_state:
+    st.session_state['jenis_bantuan_key'] = "Uang" 
 
 # --- KONFIGURASI ---
 WORKSHEET_NAME = "CSR"
@@ -83,6 +83,10 @@ col_input, col_view = st.columns([1, 1.5])
 # --------------------------
 # FORM INPUT
 # --------------------------
+# Definisikan jenis_bantuan_manual dan jenis_bantuan_final di global scope col_input
+jenis_bantuan_manual = "" 
+jenis_bantuan_final = ""
+
 with col_input:
     st.subheader("📝 Input Data Baru")
 
@@ -104,7 +108,22 @@ with col_input:
             key="jenis_bantuan_key" 
         )
 
-        # HAPUS LOGIKA LAMA untuk jenis_bantuan_manual dari dalam form
+        # REVISI 2.2: Logika input manual DIKEMBALIKAN KE DALAM FORM
+        # Namun, karena st.radio (dengan key) memicu rerun, ini seharusnya bekerja
+        if st.session_state.jenis_bantuan_key == "Lainnya":
+            jenis_bantuan_manual = st.text_input(
+                "Ketik Jenis Bantuan Lainnya", 
+                placeholder="Contoh: Beras, Kursi, Peralatan Kebersihan"
+            )
+        
+        # Menentukan nilai final untuk Jenis Bantuan (berdasarkan session state)
+        if st.session_state.jenis_bantuan_key == "Lainnya":
+            # Jika 'Lainnya' dipilih, gunakan hasil dari text input (baik itu kosong atau terisi)
+            jenis_bantuan_final = jenis_bantuan_manual 
+        else:
+            # Jika bukan 'Lainnya', gunakan nilai dari radio button
+            jenis_bantuan_final = st.session_state.jenis_bantuan_key
+
 
         uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan detail kegiatan...")
 
@@ -134,30 +153,12 @@ with col_input:
             lokasi_manual = st.text_input("Ketik Nama Lokasi Baru", key="lokasi_manual_input")
 
         submitted = st.form_submit_button("💾 Simpan Data")
-        
-    # ----------------------------------------------------------------------
-    # REVISI 2.2: Pindahkan Input Manual Keluar dari Form untuk Real-Time
-    # ----------------------------------------------------------------------
-    jenis_bantuan_manual = ""
-    if st.session_state.get("jenis_bantuan_key") == "Lainnya":
-        # Gunakan key untuk menyimpan input manual di Session State
-        jenis_bantuan_manual = st.text_input(
-            "Ketik Jenis Bantuan Lainnya", 
-            placeholder="Contoh: Beras, Kursi, Peralatan Kebersihan",
-            key="jenis_bantuan_manual_input" 
-        )
-    # ----------------------------------------------------------------------
 
-
+    
     if submitted:
         lokasi_final = lokasi_manual if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
-        
-        # REVISI 2.3: Ambil nilai final jenis bantuan dari Session State
-        if st.session_state.jenis_bantuan_key == "Lainnya":
-            jenis_bantuan_final = st.session_state.get("jenis_bantuan_manual_input", "")
-        else:
-            jenis_bantuan_final = st.session_state.jenis_bantuan_key
-        # ----------------------------------------------------------
+
+        # Nilai jenis_bantuan_final sudah dihitung di atas form, kita hanya perlu memvalidasinya
 
         # Validasi Input
         if not uraian:
@@ -180,7 +181,7 @@ with col_input:
                     new_row = [
                         tanggal.strftime("%Y-%m-%d"),
                         pilar,
-                        jenis_bantuan_final,  # Menggunakan nilai final yang sudah di-update
+                        jenis_bantuan_final,  # Menggunakan nilai final yang sudah dihitung
                         uraian,
                         jumlah,               # Nilai ini sekarang bertipe float/desimal
                         satuan,
@@ -207,10 +208,6 @@ df_data = load_data()
 with col_view:
     st.subheader("📊 Data Kegiatan CSR Terakhir")
     if not df_data.empty:
-        # Tambahkan kondisi jika df_data tidak memiliki kolom yang diharapkan, untuk menghindari error di st.dataframe
-        if all(col in df_data.columns for col in ["Tanggal", "Pilar", "Lokasi"]):
-            st.dataframe(df_data, use_container_width=True, hide_index=True)
-        else:
-            st.dataframe(df_data, use_container_width=True, hide_index=True) # Tampilkan apa adanya jika kolom tidak lengkap
+        st.dataframe(df_data, use_container_width=True, hide_index=True)
     else:
         st.info("Belum ada data untuk ditampilkan.")
