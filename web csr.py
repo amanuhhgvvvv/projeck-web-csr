@@ -200,17 +200,5 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
         
-# --------------------------
-# DATA VIEW (VIEW HANYA JIKA ADA DATA)
-# --------------------------
-df_data = load_data()
-
-with col_view:
-    st.subheader("📊 Data Kegiatan CSR Terakhir")
-    if not df_data.empty:
-        st.dataframe(df_data, use_container_width=True, hide_index=True)
-    else:
-        st.info("Belum ada data untuk ditampilkan.")
-
 
 
