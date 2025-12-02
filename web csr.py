@@ -106,17 +106,18 @@ with col_input:
 
         uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan detail kegiatan...")
 
-       # KODE REVISI
-        c1, c2 = st.columns([2, 1])
-        with c1:
-            jumlah = st.number_input(
-                "Jumlah yang diterima / Nilai", 
-                min_value=0.0, 
-                value=0.0,          # Tambahkan value=0.0 agar nilai awal juga float
-                step=0.01,          # PENTING: Mengubah step menjadi desimal
-                format="%.2f"       # Opsional: Mengatur format tampilan dua desimal
-            )
-        with c2:
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            # --- BAGIAN YANG DIREVISI UNTUK DESIMAL ---
+            jumlah = st.number_input(
+                "Jumlah yang diterima / Nilai", 
+                min_value=0.0, 
+                value=0.0,          # Mengatur nilai awal menjadi float
+                step=0.01,          # Mengatur step menjadi desimal
+                format="%.2f"       # Format tampilan dua desimal
+            )
+            # ------------------------------------------
+        with c2:
             satuan = st.selectbox("Satuan", ["-", "Ton", "Sak", "Paket", "Unit", "liter", "buah", "juta"])
 
         opsi_lokasi = [
@@ -158,7 +159,7 @@ with col_input:
                         pilar,
                         jenis_bantuan_final,  # Menggunakan nilai final
                         uraian,
-                        jumlah,
+                        jumlah,               # Nilai ini sekarang bertipe float/desimal
                         satuan,
                         lokasi_final,
                     ]
@@ -175,12 +176,14 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
         
+# --------------------------
+# DATA VIEW (VIEW HANYA JIKA ADA DATA)
+# --------------------------
+df_data = load_data()
 
-
-
-
-
-
-
-
-
+with col_view:
+    st.subheader("📊 Data Kegiatan CSR Terakhir")
+    if not df_data.empty:
+        st.dataframe(df_data, use_container_width=True, hide_index=True)
+    else:
+        st.info("Belum ada data untuk ditampilkan.")
