@@ -90,7 +90,7 @@ jenis_bantuan_final = ""
 with col_input:
     st.subheader("📝 Input Data Baru")
 
-    with st.form("form_csr", clear_on_submit=False):
+    with st.form("form_csr", clear_on_submit=true):
         tanggal = st.date_input("Tanggal Kegiatan", datetime.now().date())
 
         opsi_pilar = [
@@ -200,5 +200,6 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
         
+
 
 
