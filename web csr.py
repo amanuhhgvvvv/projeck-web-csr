@@ -125,7 +125,7 @@ with col_input:
             jenis_bantuan_final = st.session_state.jenis_bantuan_key
 
 
-        uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan detail kegiatan...")
+        uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan...")
 
         c1, c2 = st.columns([2, 1])
         with c1:
@@ -211,3 +211,4 @@ with col_view:
         st.dataframe(df_data, use_container_width=True, hide_index=True)
     else:
         st.info("Belum ada data untuk ditampilkan.")
+
