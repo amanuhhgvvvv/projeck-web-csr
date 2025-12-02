@@ -106,10 +106,17 @@ with col_input:
 
         uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan detail kegiatan...")
 
-        c1, c2 = st.columns([2, 1])
-        with c1:
-            jumlah = st.number_input("Jumlah yang diterima / Nilai", min_value=0, step=1)
-        with c2:
+       # KODE REVISI
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            jumlah = st.number_input(
+                "Jumlah yang diterima / Nilai", 
+                min_value=0.0, 
+                value=0.0,          # Tambahkan value=0.0 agar nilai awal juga float
+                step=0.01,          # PENTING: Mengubah step menjadi desimal
+                format="%.2f"       # Opsional: Mengatur format tampilan dua desimal
+            )
+        with c2:
             satuan = st.selectbox("Satuan", ["-", "Ton", "Sak", "Paket", "Unit", "liter", "buah", "juta"])
 
         opsi_lokasi = [
@@ -168,6 +175,7 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
         
+
 
 
 
