@@ -94,8 +94,8 @@ with col_input:
         tanggal = st.date_input("Tanggal Kegiatan", datetime.now().date())
 
         opsi_pilar = [
-            "Pendidikan", "Kesehatan", "Ekonomi", "Sosial Budaya Agama",
-            "Keamanan", "SDP", "Donation Cash", "Donation Goods",
+            "Pendidikan", "Kesehatan", "Ekonomi", "Sos Bud Ag",
+            "Keamanan", "Sustainable Development Project", "Donation Cash", "Donation Goods",
             "Public Relation Business", "Entertainment Business"
         ]
         pilar = st.selectbox("Pilih Pilar", opsi_pilar)
@@ -211,5 +211,6 @@ with col_view:
         st.dataframe(df_data, use_container_width=True, hide_index=True)
     else:
         st.info("Belum ada data untuk ditampilkan.")
+
 
 
