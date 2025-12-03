@@ -4,13 +4,12 @@ import gspread
 from datetime import datetime
 import time
 from google.oauth2.service_account import Credentials
-import re 
-# import locale # Dihapus karena format manual lebih stabil di Streamlit cloud
+import re
 
 # --- KONFIGURASI TAMBAHAN ---
 WORKSHEET_NAME = "CSR"
 # Definisikan konversi: Misal, 1 Sak Semen = 0.05 Ton (50 kg)
-KONVERSI_SAK_KE_TON = 0.05 
+KONVERSI_SAK_KE_TON = 0.05
 
 # Fungsi Helper untuk Pemformatan Angka ke String dengan Titik sebagai Pemisah Ribuan
 def format_rupiah_manual(angka):
@@ -107,7 +106,6 @@ col_input, col_view = st.columns([1, 1.5])
 # --------------------------
 # FORM INPUT
 # --------------------------
-# Definisikan jenis_bantuan_manual dan jenis_bantuan_final di global scope col_input
 jenis_bantuan_manual = "" 
 jenis_bantuan_final = ""
 
@@ -124,7 +122,6 @@ with col_input:
         ]
         pilar = st.selectbox("Pilih Pilar", opsi_pilar)
         
-        # REVISI 2.1: Tambahkan KEY pada st.radio agar nilainya tersedia di Session State
         jenis_bantuan = st.radio(
             "Jenis Bantuan", 
             ["Uang", "Semen / Material", "Lainnya"], 
@@ -132,14 +129,12 @@ with col_input:
             key="jenis_bantuan_key" 
         )
 
-        # REVISI 2.2: Logika input manual DIKEMBALIKAN KE DALAM FORM
         if st.session_state.jenis_bantuan_key == "Lainnya":
             jenis_bantuan_manual = st.text_input(
                 "Ketik Jenis Bantuan Lainnya", 
                 placeholder="Contoh: Beras, Kursi, Peralatan Kebersihan"
             )
         
-        # Menentukan nilai final untuk Jenis Bantuan (berdasarkan session state)
         if st.session_state.jenis_bantuan_key == "Lainnya":
             jenis_bantuan_final = jenis_bantuan_manual 
         else:
@@ -152,7 +147,7 @@ with col_input:
         
         # Contoh placeholder disesuaikan berdasarkan pilihan
         if jenis_bantuan_final == "Uang":
-            placeholder_text = "Contoh: Rp1000000 atau 1.500.000"
+            placeholder_text = "Contoh: 1000000 atau 1.500.000"
         elif jenis_bantuan_final == "Semen / Material":
             placeholder_text = "Contoh: 50 Sak atau 2 Ton"
         else:
@@ -160,7 +155,7 @@ with col_input:
             
         # Mengganti c1, c2 dan st.number_input/st.text_input menjadi SATU st.text_input
         jumlah_dan_satuan_mentah = st.text_input(
-            f"Jumlah yang diterima / Nilai (Masukkan nominal dan satuan)", 
+            f"Jumlah / Nilai (Masukkan nominal dan satuan)", 
             placeholder=placeholder_text,
             key="jumlah_satuan_mentah_input"
         )
@@ -184,54 +179,55 @@ with col_input:
     if submitted:
         lokasi_final = lokasi_manual if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
         
-        # --- LOGIKA EKSTRAKSI NOMINAL DAN SATUAN DARI INPUT TUNGGAL ---
-        
-        # Membersihkan input dari pemisah ribuan dan simbol Rupiah yang mungkin
-        input_clean = jumlah_dan_satuan_mentah.replace('.', '').replace('Rp', '').replace('rp', '').strip()
-        
-        # Regex untuk memisahkan angka di awal string dari teks/satuan di belakangnya.
-        match = re.match(r"(\d+[\.\,]?\d*)\s*([a-zA-Z\/]+.*)?", input_clean)
+        # --- LOGIKA EKSTRAKSI NOMINAL (SATUAN HANYA DIPAKAI UNTUK KONVERSI) ---
         
         jumlah_final = 0.0
-        satuan_final = ""
+        satuan_untuk_konversi = ""
         validasi_ekstraksi = True
 
+        # Membersihkan input dari simbol mata uang, dan menormalkan format
+        input_clean = jumlah_dan_satuan_mentah.replace('Rp', '').replace('rp', '').strip()
+
+        # Regex mencari nominal (angka/desimal/ribuan) di awal, dan sisanya adalah satuan
+        match = re.match(r"([\d\.\,]+)\s*(.*)?", input_clean)
+
         if match:
-            # Grup 1 adalah Angka (nominal)
-            nominal_str = match.group(1).replace(',', '.') # Ganti koma desimal ke titik
+            nominal_str_raw = match.group(1).strip()
+            
+            # Logika pembersihan dan konversi string nominal ke float
+            if nominal_str_raw.count('.') > 0 and nominal_str_raw.count(',') > 0:
+                # Jika ada titik dan koma (misal 1.000,50), anggap titik adalah ribuan, koma desimal
+                nominal_str_clean = nominal_str_raw.replace('.', '').replace(',', '.')
+            elif nominal_str_raw.count('.') >= 1 and nominal_str_raw.count(',') == 0:
+                # Jika banyak titik (misal 1.000.000), anggap titik adalah pemisah ribuan (dihapus)
+                nominal_str_clean = nominal_str_raw.replace('.', '')
+            else:
+                # Hanya ada koma (misal 100,50), anggap koma adalah desimal
+                nominal_str_clean = nominal_str_raw.replace(',', '.')
+                
             try:
-                jumlah_final = float(nominal_str)
+                jumlah_final = float(nominal_str_clean)
             except ValueError:
                 validasi_ekstraksi = False
-                
-            # Grup 2 adalah Satuan (teks)
-            satuan_final = match.group(2).strip() if match.group(2) else ""
             
-            # Khusus untuk UANG: Jika satuan kosong, isi otomatis Rupiah
-            if jenis_bantuan_final == "Uang" and not satuan_final:
-                 satuan_final = "Rupiah"
+            # Satuan diekstrak untuk KEPENTINGAN KONVERSI Semen/Material
+            satuan_untuk_konversi = match.group(2).strip() if match.group(2) else ""
             
-            # Jika bukan uang dan satuan masih kosong, itu error
-            if jenis_bantuan_final != "Uang" and not satuan_final:
-                 validasi_ekstraksi = False
+            # Jika bukan uang dan satuan masih kosong (misal "50" untuk Semen), itu error
+            if jenis_bantuan_final != "Uang" and not satuan_untuk_konversi:
+                validasi_ekstraksi = False
+
         else:
-             validasi_ekstraksi = False
+            validasi_ekstraksi = False
 
 
-        # --- LOGIKA KONVERSI ---
+        # --- LOGIKA KONVERSI (HANYA MENGUBAH JUMLAH) ---
         
         if jenis_bantuan_final == "Semen / Material":
-            # Konversi ke Ton HANYA jika jenis bantuan adalah Semen / Material
-            if satuan_final.lower() == "sak":
+            # Konversi ke Ton HANYA jika jenis bantuan adalah Semen / Material dan satuan adalah Sak
+            if satuan_untuk_konversi.lower() == "sak":
                 jumlah_final = jumlah_final * KONVERSI_SAK_KE_TON
-                satuan_final = "Ton" # Nilai satuan di Sheets menjadi Ton (Otomatis)
-            elif satuan_final.lower() == "ton":
-                satuan_final = "Ton" # Pastikan konsisten
             
-        elif jenis_bantuan_final == "Uang":
-            # JIKA JENIS BANTUAN ADALAH UANG, SELALU PAKSA SATUAN MENJADI RUPIAH
-            satuan_final = "Rupiah"
-        
         # --- AKHIR LOGIKA KONVERSI ---
 
 
@@ -243,7 +239,7 @@ with col_input:
         elif st.session_state.jenis_bantuan_key == "Lainnya" and not jenis_bantuan_final:
             st.error("⚠ Jenis Bantuan Lainnya belum diisi.")
         elif not validasi_ekstraksi:
-            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan angka diikuti satuan (contoh: 5 Ton).")
+            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan nominal (contoh: 500000 atau 50 Sak).")
         elif jumlah_final <= 0:
             st.error("⚠ Jumlah harus lebih dari nol.")
         else:
@@ -253,19 +249,21 @@ with col_input:
                     sheet = client.open_by_key(st.secrets["SHEET_ID"])
                     worksheet = sheet.worksheet(WORKSHEET_NAME)
                     
-                    # --- PERUBAHAN UTAMA: PEMFORMATAN STRING UNTUK OUTPUT ---
+                    # --- PEMFORMATAN STRING UNTUK OUTPUT ---
                     
+                    # Jumlah diformat ke string dengan titik sebagai pemisah ribuan
                     jumlah_terformat_string = format_rupiah_manual(jumlah_final) 
-                    # Memformat semua angka yang dikirim (uang atau material) ke string berformat titik.
-                        
-                    # Urutan kolom yang dikirim ke Google Sheets
+                    
+                    # Urutan kolom yang dikirim ke Google Sheets (TANPA KOLOM SATUAN)
+                    # Urutan ini harus sesuai dengan kolom di Google Sheets Anda:
+                    # [Tanggal, Pilar, Jenis Bantuan, Uraian, JUMLAH, LOKASI]
+                    
                     new_row = [
                         tanggal.strftime("%Y-%m-%d"),
                         pilar,
                         jenis_bantuan_final,
                         uraian,
-                        jumlah_terformat_string, # Menggunakan nilai STRING terformat dengan titik
-                        satuan_final,           # Nilai satuan yang sudah diekstrak/dikonversi
+                        jumlah_terformat_string, # MENGGANTIKAN KOLOM JUMLAH & SATUAN
                         lokasi_final,
                     ]
 
@@ -279,4 +277,16 @@ with col_input:
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}")
+                st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}") 
+
+# --------------------------
+# DATA VIEW
+# --------------------------
+with col_view:
+    st.subheader("📊 Data Tersimpan")
+    df = load_data()
+
+    if not df.empty:
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("Belum ada data yang tersimpan.")
