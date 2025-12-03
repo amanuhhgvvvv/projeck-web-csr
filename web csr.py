@@ -147,7 +147,8 @@ with col_input:
         
         # Contoh placeholder disesuaikan berdasarkan pilihan
         if jenis_bantuan_final == "Uang":
-            placeholder_text = "Contoh: 1000000 atau 1.500.000"
+            # Perbarui placeholder untuk mendorong format koma/titik yang benar
+            placeholder_text = "Contoh: 1.000.000 (Satu Juta) atau 1.500,50" 
         elif jenis_bantuan_final == "Semen / Material":
             placeholder_text = "Contoh: 50 Sak atau 2 Ton"
         else:
@@ -194,17 +195,33 @@ with col_input:
         if match:
             nominal_str_raw = match.group(1).strip()
             
-            # Logika pembersihan dan konversi string nominal ke float
-            if nominal_str_raw.count('.') > 0 and nominal_str_raw.count(',') > 0:
-                # Jika ada titik dan koma (misal 1.000,50), anggap titik adalah ribuan, koma desimal
-                nominal_str_clean = nominal_str_raw.replace('.', '').replace(',', '.')
-            elif nominal_str_raw.count('.') >= 1 and nominal_str_raw.count(',') == 0:
-                # Jika banyak titik (misal 1.000.000), anggap titik adalah pemisah ribuan (dihapus)
-                nominal_str_clean = nominal_str_raw.replace('.', '')
-            else:
-                # Hanya ada koma (misal 100,50), anggap koma adalah desimal
-                nominal_str_clean = nominal_str_raw.replace(',', '.')
+            # --- PERBAIKAN LOGIKA EKSTRAKSI UNTUK MENJAMIN SATU JUTA DIBACA BENAR ---
+            nominal_str_clean = nominal_str_raw
+            
+            # 1. Cek separator terakhir (yang paling mungkin adalah desimal)
+            last_separator = ''
+            if nominal_str_raw.rfind(',') > nominal_str_raw.rfind('.'):
+                last_separator = ','
+            elif nominal_str_raw.rfind('.') > -1:
+                last_separator = '.'
+
+            # 2. Jika ada separator, asumsikan separator terakhir adalah desimal
+            if last_separator:
+                # Pisahkan berdasarkan separator terakhir
+                parts = nominal_str_raw.rsplit(last_separator, 1)
                 
+                # Hapus semua pemisah ribuan (titik/koma) dari bagian bilangan bulat (parts[0])
+                parts[0] = parts[0].replace('.', '').replace(',', '')
+                
+                # Gabungkan kembali: [Angka tanpa ribuan] . [Desimal]
+                nominal_str_clean = parts[0] + '.' + parts[1]
+            else:
+                # Tidak ada separator (misal '1000000')
+                pass
+
+            # 3. Ganti koma ke titik (hanya untuk memastikan, untuk float Python)
+            nominal_str_clean = nominal_str_clean.replace(',', '.') 
+            
             try:
                 jumlah_final = float(nominal_str_clean)
             except ValueError:
@@ -239,7 +256,7 @@ with col_input:
         elif st.session_state.jenis_bantuan_key == "Lainnya" and not jenis_bantuan_final:
             st.error("⚠ Jenis Bantuan Lainnya belum diisi.")
         elif not validasi_ekstraksi:
-            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan nominal (contoh: 500000 atau 50 Sak).")
+            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan nominal (contoh: 1.000.000 atau 50 Sak).")
         elif jumlah_final <= 0:
             st.error("⚠ Jumlah harus lebih dari nol.")
         else:
@@ -251,12 +268,10 @@ with col_input:
                     
                     # --- PEMFORMATAN STRING UNTUK OUTPUT ---
                     
-                    # Jumlah diformat ke string dengan titik sebagai pemisah ribuan
+                    # Jumlah diformat ke string dengan titik sebagai pemisah ribuan (1.000.000)
                     jumlah_terformat_string = format_rupiah_manual(jumlah_final) 
                     
                     # Urutan kolom yang dikirim ke Google Sheets (TANPA KOLOM SATUAN)
-                    # Urutan ini harus sesuai dengan kolom di Google Sheets Anda:
-                    # [Tanggal, Pilar, Jenis Bantuan, Uraian, JUMLAH, LOKASI]
                     
                     new_row = [
                         tanggal.strftime("%Y-%m-%d"),
