@@ -4,6 +4,7 @@ import gspread
 from datetime import datetime
 import time
 from google.oauth2.service_account import Credentials
+import re # Diperlukan untuk memisahkan angka dan satuan dari input teks
 
 # --- KONFIGURASI TAMBAHAN ---
 WORKSHEET_NAME = "CSR"
@@ -126,44 +127,29 @@ with col_input:
 
         uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan...")
 
-        c1, c2 = st.columns([2, 1])
+        # --- PERUBAHAN UTAMA: SATU INPUT UNTUK NOMINAL & SATUAN ---
         
-        # --- PERUBAHAN TAMPILAN NOMINAL ---
-        
-        # Label Input disesuaikan untuk menunjukkan format
-        input_label = "Jumlah yang diterima / Nilai (Contoh: 2.500.000)" if jenis_bantuan_final == "Uang" else "Jumlah yang diterima / Nilai"
-        
-        # Penentuan Nilai Default Satuan untuk Text Input
+        # Contoh placeholder disesuaikan berdasarkan pilihan
         if jenis_bantuan_final == "Uang":
-            satuan_default = "Rupiah" # Otomatis terisi
-            jumlah_input_key = "jumlah_rupiah_input"
+            placeholder_text = "Contoh: Rp1000000 atau 1.500.000"
         elif jenis_bantuan_final == "Semen / Material":
-            satuan_default = "Ton" # Nilai default, bisa diubah user
-            jumlah_input_key = "jumlah_material_input"
+            placeholder_text = "Contoh: 50 Sak atau 2 Ton"
         else:
-            satuan_default = "-"
-            jumlah_input_key = "jumlah_lain_input"
+            placeholder_text = "Contoh: 5 Paket atau 10 Liter"
             
-        with c1:
-            # Tetap gunakan st.number_input untuk memastikan input adalah angka desimal
-            jumlah = st.number_input(
-                input_label, 
-                min_value=0.0, 
-                value=0.0,      
-                step=0.01,      
-                format="%.2f",
-                key=jumlah_input_key
-            )
+        # Mengganti c1, c2 dan st.number_input/st.text_input menjadi SATU st.text_input
+        # Menggunakan key unik karena ini adalah input utama
+        jumlah_dan_satuan_mentah = st.text_input(
+            f"Jumlah yang diterima / Nilai (Masukkan nominal dan satuan)", 
+            placeholder=placeholder_text,
+            key="jumlah_satuan_mentah_input"
+        )
         
-        with c2:
-            # Mengganti st.selectbox Satuan dengan st.text_input
-            satuan = st.text_input(
-                "Satuan (Ketik Manual)", 
-                value=satuan_default, 
-                placeholder="Contoh: Ton, Sak, Paket",
-                key="satuan_manual_input"
-            )
-        # --- AKHIR PERUBAHAN TAMPILAN NOMINAL ---
+        # Variabel 'jumlah' dan 'satuan' sementara diinisialisasi untuk validasi/submit
+        jumlah = 0.0 # Akan diisi dengan nilai angka yang diekstrak
+        satuan = ""  # Akan diisi dengan teks satuan yang diekstrak
+        
+        # Catatan: Karena kolom Satuan (c2) dihilangkan, variabel 'satuan' akan diisi dari pemrosesan di 'if submitted'
 
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
@@ -183,36 +169,69 @@ with col_input:
     if submitted:
         lokasi_final = lokasi_manual if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
         
-        # --- LOGIKA KONVERSI DAN PENYESUAIAN NILAI FINAL ---
-        jumlah_final = jumlah
-        satuan_final = satuan
+        # --- LOGIKA EKSTRAKSI NOMINAL DAN SATUAN DARI INPUT TUNGGAL ---
         
-        if jenis_bantuan_final == "Uang":
+        # Membersihkan input dari pemisah ribuan dan simbol Rupiah yang mungkin
+        input_clean = jumlah_dan_satuan_mentah.replace('.', '').replace('Rp', '').replace('rp', '').strip()
+        
+        # Regex untuk memisahkan angka di awal string dari teks/satuan di belakangnya.
+        # Mencari float/integer di awal string
+        match = re.match(r"(\d+[\.\,]?\d*)\s*([a-zA-Z\/]+.*)?", input_clean)
+        
+        jumlah_final = 0.0
+        satuan_final = ""
+        validasi_ekstraksi = True
+
+        if match:
+            # Grup 1 adalah Angka (nominal)
+            nominal_str = match.group(1).replace(',', '.') # Ganti koma desimal ke titik
+            try:
+                jumlah_final = float(nominal_str)
+            except ValueError:
+                validasi_ekstraksi = False
+                
+            # Grup 2 adalah Satuan (teks)
+            satuan_final = match.group(2).strip() if match.group(2) else ""
+            
+            # Khusus untuk UANG: Jika satuan kosong, isi otomatis Rupiah
+            if jenis_bantuan_final == "Uang" and not satuan_final:
+                 satuan_final = "Rupiah"
+            
+            # Jika bukan uang dan satuan masih kosong, itu error
+            if jenis_bantuan_final != "Uang" and not satuan_final:
+                 validasi_ekstraksi = False
+        else:
+             validasi_ekstraksi = False
+
+
+        # --- LOGIKA KONVERSI (berdasarkan permintaan sebelumnya) ---
+        
+        if jenis_bantuan_final == "Semen / Material":
+            # Cek apakah user menginput 'Sak' atau 'sak' di kolom Satuan manual
+            if satuan_final.lower() == "sak":
+                # Konversi jumlah dari Sak ke Ton (misal 1 Sak = 0.05 Ton)
+                jumlah_final = jumlah_final * KONVERSI_SAK_KE_TON
+                satuan_final = "Ton" # Nilai satuan di Sheets menjadi Ton (Otomatis)
+            # Jika user input Ton, Kg, atau lainnya, ikuti input user
+        
+        elif jenis_bantuan_final == "Uang":
+            # Pastikan satuan yang tersimpan adalah Rupiah
             satuan_final = "Rupiah"
         
-        elif jenis_bantuan_final == "Semen / Material":
-            # Cek apakah user menginput 'Sak' atau 'sak' di kolom Satuan manual
-            if satuan.lower() == "sak":
-                # Konversi jumlah dari Sak ke Ton (misal 1 Sak = 0.05 Ton)
-                jumlah_final = jumlah * KONVERSI_SAK_KE_TON
-                satuan_final = "Ton" # Nilai satuan di Sheets menjadi Ton (Otomatis)
-            else:
-                satuan_final = satuan # Jika user input Ton, Kg, atau lainnya, ikuti input user
         # --- AKHIR LOGIKA KONVERSI ---
 
 
-        # Validasi Input
+        # Validasi Input (Diperbarui)
         if not uraian:
             st.error("⚠ Uraian tidak boleh kosong.")
         elif lokasi_select == "Lainnya (Input Manual)" and not lokasi_final:
             st.error("⚠ Lokasi manual belum diisi.")
-        # REVISI 2.4: Validasi untuk input manual yang baru
         elif st.session_state.jenis_bantuan_key == "Lainnya" and not jenis_bantuan_final:
             st.error("⚠ Jenis Bantuan Lainnya belum diisi.")
-        elif jumlah <= 0:
+        elif not validasi_ekstraksi:
+            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan angka diikuti satuan (contoh: 5 Ton).")
+        elif jumlah_final <= 0:
             st.error("⚠ Jumlah harus lebih dari nol.")
-        elif not satuan_final or satuan_final.strip() == "":
-            st.error("⚠ Satuan tidak boleh kosong.")
         else:
             try:
                 with st.spinner("⏳ Menyimpan data..."):
@@ -224,10 +243,10 @@ with col_input:
                     new_row = [
                         tanggal.strftime("%Y-%m-%d"),
                         pilar,
-                        jenis_bantuan_final,  # Menggunakan nilai final yang sudah dihitung
+                        jenis_bantuan_final,
                         uraian,
-                        jumlah_final,         # Menggunakan nilai yang sudah dikonversi
-                        satuan_final,         # Menggunakan satuan yang sudah disesuaikan
+                        jumlah_final,         # Nilai angka yang sudah diekstrak dan dikonversi
+                        satuan_final,         # Nilai satuan yang sudah diekstrak/dikonversi
                         lokasi_final,
                     ]
 
