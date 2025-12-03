@@ -138,18 +138,12 @@ with col_input:
             placeholder_text = "Contoh: 5 Paket atau 10 Liter"
             
         # Mengganti c1, c2 dan st.number_input/st.text_input menjadi SATU st.text_input
-        # Menggunakan key unik karena ini adalah input utama
         jumlah_dan_satuan_mentah = st.text_input(
             f"Jumlah yang diterima / Nilai (Masukkan nominal dan satuan)", 
             placeholder=placeholder_text,
             key="jumlah_satuan_mentah_input"
         )
-        
-        # Variabel 'jumlah' dan 'satuan' sementara diinisialisasi untuk validasi/submit
-        jumlah = 0.0 # Akan diisi dengan nilai angka yang diekstrak
-        satuan = ""  # Akan diisi dengan teks satuan yang diekstrak
-        
-        # Catatan: Karena kolom Satuan (c2) dihilangkan, variabel 'satuan' akan diisi dari pemrosesan di 'if submitted'
+        # --- AKHIR PERUBAHAN UTAMA ---
 
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
@@ -175,7 +169,6 @@ with col_input:
         input_clean = jumlah_dan_satuan_mentah.replace('.', '').replace('Rp', '').replace('rp', '').strip()
         
         # Regex untuk memisahkan angka di awal string dari teks/satuan di belakangnya.
-        # Mencari float/integer di awal string
         match = re.match(r"(\d+[\.\,]?\d*)\s*([a-zA-Z\/]+.*)?", input_clean)
         
         jumlah_final = 0.0
@@ -204,18 +197,18 @@ with col_input:
              validasi_ekstraksi = False
 
 
-        # --- LOGIKA KONVERSI (berdasarkan permintaan sebelumnya) ---
+        # --- LOGIKA KONVERSI ---
         
         if jenis_bantuan_final == "Semen / Material":
-            # Cek apakah user menginput 'Sak' atau 'sak' di kolom Satuan manual
+            # Konversi ke Ton HANYA jika jenis bantuan adalah Semen / Material
             if satuan_final.lower() == "sak":
-                # Konversi jumlah dari Sak ke Ton (misal 1 Sak = 0.05 Ton)
                 jumlah_final = jumlah_final * KONVERSI_SAK_KE_TON
                 satuan_final = "Ton" # Nilai satuan di Sheets menjadi Ton (Otomatis)
-            # Jika user input Ton, Kg, atau lainnya, ikuti input user
-        
+            elif satuan_final.lower() == "ton":
+                satuan_final = "Ton" # Pastikan konsisten
+            
         elif jenis_bantuan_final == "Uang":
-            # Pastikan satuan yang tersimpan adalah Rupiah
+            # JIKA JENIS BANTUAN ADALAH UANG, SELALU PAKSA SATUAN MENJADI RUPIAH
             satuan_final = "Rupiah"
         
         # --- AKHIR LOGIKA KONVERSI ---
