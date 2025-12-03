@@ -4,12 +4,33 @@ import gspread
 from datetime import datetime
 import time
 from google.oauth2.service_account import Credentials
-import re # Diperlukan untuk memisahkan angka dan satuan dari input teks
+import re 
+# import locale # Dihapus karena format manual lebih stabil di Streamlit cloud
 
 # --- KONFIGURASI TAMBAHAN ---
 WORKSHEET_NAME = "CSR"
 # Definisikan konversi: Misal, 1 Sak Semen = 0.05 Ton (50 kg)
 KONVERSI_SAK_KE_TON = 0.05 
+
+# Fungsi Helper untuk Pemformatan Angka ke String dengan Titik sebagai Pemisah Ribuan
+def format_rupiah_manual(angka):
+    """Memformat angka float/int menjadi string dengan titik sebagai pemisah ribuan."""
+    try:
+        if isinstance(angka, str):
+            # Coba konversi string ke float jika diperlukan
+            angka = float(angka)
+        
+        # Jika nilai adalah bilangan bulat (misal 100000.0), tampilkan tanpa desimal
+        if angka.is_integer():
+            angka_int = int(angka)
+            # Menggunakan f-string formatting dengan koma sebagai pemisah ribuan, lalu ganti koma menjadi titik
+            return f'{angka_int:,}'.replace(',', '.')
+        else:
+            # Jika ada desimal, format dengan dua angka desimal dan titik sebagai pemisah ribuan
+            # Metode penggantian X diperlukan untuk lingkungan non-default locale
+            return f'{angka:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
+    except:
+        return str(angka) # Kembalikan sebagai string biasa jika gagal diformat
 
 # --- SESSION STATE ---
 if 'lokasi_manual_input' not in st.session_state:
@@ -232,14 +253,19 @@ with col_input:
                     sheet = client.open_by_key(st.secrets["SHEET_ID"])
                     worksheet = sheet.worksheet(WORKSHEET_NAME)
                     
+                    # --- PERUBAHAN UTAMA: PEMFORMATAN STRING UNTUK OUTPUT ---
+                    
+                    jumlah_terformat_string = format_rupiah_manual(jumlah_final) 
+                    # Memformat semua angka yang dikirim (uang atau material) ke string berformat titik.
+                        
                     # Urutan kolom yang dikirim ke Google Sheets
                     new_row = [
                         tanggal.strftime("%Y-%m-%d"),
                         pilar,
                         jenis_bantuan_final,
                         uraian,
-                        jumlah_final,         # Nilai angka yang sudah diekstrak dan dikonversi
-                        satuan_final,         # Nilai satuan yang sudah diekstrak/dikonversi
+                        jumlah_terformat_string, # Menggunakan nilai STRING terformat dengan titik
+                        satuan_final,           # Nilai satuan yang sudah diekstrak/dikonversi
                         lokasi_final,
                     ]
 
