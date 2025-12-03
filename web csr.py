@@ -5,6 +5,11 @@ from datetime import datetime
 import time
 from google.oauth2.service_account import Credentials
 
+# --- KONFIGURASI TAMBAHAN ---
+WORKSHEET_NAME = "CSR"
+# Definisikan konversi: Misal, 1 Sak Semen = 0.05 Ton (50 kg)
+KONVERSI_SAK_KE_TON = 0.05 
+
 # --- SESSION STATE ---
 if 'lokasi_manual_input' not in st.session_state:
     st.session_state['lokasi_manual_input'] = ""
@@ -13,9 +18,6 @@ if 'lokasi_select_state' not in st.session_state:
 # Inisialisasi tambahan untuk memastikan key jenis bantuan ada
 if 'jenis_bantuan_key' not in st.session_state:
     st.session_state['jenis_bantuan_key'] = "Uang" 
-
-# --- KONFIGURASI ---
-WORKSHEET_NAME = "CSR"
 
 # --- GOOGLE SHEETS CLIENT ---
 @st.cache_resource(ttl=3600)
@@ -109,7 +111,6 @@ with col_input:
         )
 
         # REVISI 2.2: Logika input manual DIKEMBALIKAN KE DALAM FORM
-        # Namun, karena st.radio (dengan key) memicu rerun, ini seharusnya bekerja
         if st.session_state.jenis_bantuan_key == "Lainnya":
             jenis_bantuan_manual = st.text_input(
                 "Ketik Jenis Bantuan Lainnya", 
@@ -118,27 +119,49 @@ with col_input:
         
         # Menentukan nilai final untuk Jenis Bantuan (berdasarkan session state)
         if st.session_state.jenis_bantuan_key == "Lainnya":
-            # Jika 'Lainnya' dipilih, gunakan hasil dari text input (baik itu kosong atau terisi)
             jenis_bantuan_final = jenis_bantuan_manual 
         else:
-            # Jika bukan 'Lainnya', gunakan nilai dari radio button
             jenis_bantuan_final = st.session_state.jenis_bantuan_key
 
 
         uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan...")
 
         c1, c2 = st.columns([2, 1])
+        
+        # Penyesuaian label berdasarkan pilihan Bantuan
+        input_label = "Jumlah yang diterima / Nilai (Rp.)" if jenis_bantuan_final == "Uang" else "Jumlah yang diterima / Nilai"
+        
         with c1:
             # REVISI 1: Menerima Bilangan Desimal (Float)
             jumlah = st.number_input(
-                "Jumlah yang diterima / Nilai", 
+                input_label, 
                 min_value=0.0, 
-                value=0.0,          
-                step=0.01,         
-                format="%.2f"      
+                value=0.0,      
+                step=0.01,      
+                format="%.2f"       
             )
-        with c2:
-            satuan = st.selectbox("Satuan", ["-", "Ton", "Sak", "Paket", "Unit", "liter", "buah", "juta"])
+        
+        # --- PERUBAHAN LOGIKA SATUAN ---
+        # Opsi Satuan: HILANGKAN 'juta'
+        opsi_satuan = ["-", "Ton", "Sak", "Paket", "Unit", "liter", "buah"]
+        
+        satuan = "-" # Nilai default
+        
+        if jenis_bantuan_final == "Uang":
+            # Jika Uang, tampilkan Satuan sebagai 'Rupiah' (non-interaktif)
+            with c2:
+                 st.markdown(f"**Satuan**")
+                 st.info("Rupiah (Otomatis)")
+                 satuan = "Rupiah" # Nilai yang akan dikirim jika Uang
+        elif jenis_bantuan_final == "Semen / Material":
+            # Untuk Semen/Material, kita berikan opsi Ton/Sak dan konversi ke Ton saat disimpan
+            with c2:
+                satuan = st.selectbox("Satuan", ["Ton", "Sak"])
+        else:
+            # Untuk Lainnya/Default, gunakan opsi standar
+            with c2:
+                satuan = st.selectbox("Satuan", opsi_satuan)
+        # --- AKHIR PERUBAHAN LOGIKA SATUAN ---
 
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
@@ -157,6 +180,24 @@ with col_input:
     
     if submitted:
         lokasi_final = lokasi_manual if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
+        
+        # --- LOGIKA KONVERSI DAN PENYESUAIAN NILAI FINAL ---
+        jumlah_final = jumlah
+        satuan_final = satuan
+        
+        if jenis_bantuan_final == "Uang":
+            # 1. Konversi Rupiah: Satuan sudah diset di atas menjadi "Rupiah"
+            satuan_final = "Rupiah"
+        
+        elif jenis_bantuan_final == "Semen / Material":
+            # 2. Konversi Ton: Jika user memilih 'Sak', konversi ke Ton
+            if satuan == "Sak":
+                # Konversi jumlah dari Sak ke Ton (misal 1 Sak = 0.05 Ton)
+                jumlah_final = jumlah * KONVERSI_SAK_KE_TON
+                satuan_final = "Ton" # Nilai satuan di Sheets menjadi Ton
+            else:
+                satuan_final = satuan # Tetap Ton (jika user memilih Ton)
+        # --- AKHIR LOGIKA KONVERSI ---
 
         # Nilai jenis_bantuan_final sudah dihitung di atas form, kita hanya perlu memvalidasinya
 
@@ -183,8 +224,8 @@ with col_input:
                         pilar,
                         jenis_bantuan_final,  # Menggunakan nilai final yang sudah dihitung
                         uraian,
-                        jumlah,               # Nilai ini sekarang bertipe float/desimal
-                        satuan,
+                        jumlah_final,         # Menggunakan nilai yang sudah dikonversi
+                        satuan_final,         # Menggunakan satuan yang sudah disesuaikan
                         lokasi_final,
                     ]
 
