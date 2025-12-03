@@ -128,40 +128,42 @@ with col_input:
 
         c1, c2 = st.columns([2, 1])
         
-        # Penyesuaian label berdasarkan pilihan Bantuan
-        input_label = "Jumlah yang diterima / Nilai (Rp.)" if jenis_bantuan_final == "Uang" else "Jumlah yang diterima / Nilai"
+        # --- PERUBAHAN TAMPILAN NOMINAL ---
         
+        # Label Input disesuaikan untuk menunjukkan format
+        input_label = "Jumlah yang diterima / Nilai (Contoh: 2.500.000)" if jenis_bantuan_final == "Uang" else "Jumlah yang diterima / Nilai"
+        
+        # Penentuan Nilai Default Satuan untuk Text Input
+        if jenis_bantuan_final == "Uang":
+            satuan_default = "Rupiah" # Otomatis terisi
+            jumlah_input_key = "jumlah_rupiah_input"
+        elif jenis_bantuan_final == "Semen / Material":
+            satuan_default = "Ton" # Nilai default, bisa diubah user
+            jumlah_input_key = "jumlah_material_input"
+        else:
+            satuan_default = "-"
+            jumlah_input_key = "jumlah_lain_input"
+            
         with c1:
-            # REVISI 1: Menerima Bilangan Desimal (Float)
+            # Tetap gunakan st.number_input untuk memastikan input adalah angka desimal
             jumlah = st.number_input(
                 input_label, 
                 min_value=0.0, 
                 value=0.0,      
                 step=0.01,      
-                format="%.2f"       
+                format="%.2f",
+                key=jumlah_input_key
             )
         
-        # --- PERUBAHAN LOGIKA SATUAN ---
-        # Opsi Satuan: HILANGKAN 'juta'
-        opsi_satuan = ["-", "Ton", "Sak", "Paket", "Unit", "liter", "buah"]
-        
-        satuan = "-" # Nilai default
-        
-        if jenis_bantuan_final == "Uang":
-            # Jika Uang, tampilkan Satuan sebagai 'Rupiah' (non-interaktif)
-            with c2:
-                 st.markdown(f"**Satuan**")
-                 st.info("Rupiah (Otomatis)")
-                 satuan = "Rupiah" # Nilai yang akan dikirim jika Uang
-        elif jenis_bantuan_final == "Semen / Material":
-            # Untuk Semen/Material, kita berikan opsi Ton/Sak dan konversi ke Ton saat disimpan
-            with c2:
-                satuan = st.selectbox("Satuan", ["Ton", "Sak"])
-        else:
-            # Untuk Lainnya/Default, gunakan opsi standar
-            with c2:
-                satuan = st.selectbox("Satuan", opsi_satuan)
-        # --- AKHIR PERUBAHAN LOGIKA SATUAN ---
+        with c2:
+            # Mengganti st.selectbox Satuan dengan st.text_input
+            satuan = st.text_input(
+                "Satuan (Ketik Manual)", 
+                value=satuan_default, 
+                placeholder="Contoh: Ton, Sak, Paket",
+                key="satuan_manual_input"
+            )
+        # --- AKHIR PERUBAHAN TAMPILAN NOMINAL ---
 
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
@@ -186,20 +188,18 @@ with col_input:
         satuan_final = satuan
         
         if jenis_bantuan_final == "Uang":
-            # 1. Konversi Rupiah: Satuan sudah diset di atas menjadi "Rupiah"
             satuan_final = "Rupiah"
         
         elif jenis_bantuan_final == "Semen / Material":
-            # 2. Konversi Ton: Jika user memilih 'Sak', konversi ke Ton
-            if satuan == "Sak":
+            # Cek apakah user menginput 'Sak' atau 'sak' di kolom Satuan manual
+            if satuan.lower() == "sak":
                 # Konversi jumlah dari Sak ke Ton (misal 1 Sak = 0.05 Ton)
                 jumlah_final = jumlah * KONVERSI_SAK_KE_TON
-                satuan_final = "Ton" # Nilai satuan di Sheets menjadi Ton
+                satuan_final = "Ton" # Nilai satuan di Sheets menjadi Ton (Otomatis)
             else:
-                satuan_final = satuan # Tetap Ton (jika user memilih Ton)
+                satuan_final = satuan # Jika user input Ton, Kg, atau lainnya, ikuti input user
         # --- AKHIR LOGIKA KONVERSI ---
 
-        # Nilai jenis_bantuan_final sudah dihitung di atas form, kita hanya perlu memvalidasinya
 
         # Validasi Input
         if not uraian:
@@ -211,6 +211,8 @@ with col_input:
             st.error("⚠ Jenis Bantuan Lainnya belum diisi.")
         elif jumlah <= 0:
             st.error("⚠ Jumlah harus lebih dari nol.")
+        elif not satuan_final or satuan_final.strip() == "":
+            st.error("⚠ Satuan tidak boleh kosong.")
         else:
             try:
                 with st.spinner("⏳ Menyimpan data..."):
