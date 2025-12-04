@@ -11,43 +11,43 @@ WORKSHEET_NAME = "CSR"
 # Definisikan konversi: Misal, 1 Sak Semen = 0.05 Ton (50 kg)
 KONVERSI_SAK_KE_TON = 0.05
 
-# Fungsi Helper untuk Pemformatan Angka ke String dengan Titik sebagai Pemisah Ribuan
-def format_rupiah_manual(angka):
-    """
-    Memformat angka float/int menjadi string dengan titik sebagai pemisah ribuan
-    dan DUA ANGKA DESIMAL, menggunakan titik sebagai separator desimal.
-    Contoh: 50987.00 -> "50.987.00"
-    """
+# Fungsi Helper 1: Untuk UANG (Selalu tampil dua desimal)
+def format_rupiah_uang(angka):
+    """Memformat angka float/int menjadi string dengan titik sebagai pemisah ribuan dan SELALU dua desimal."""
     try:
         if isinstance(angka, str):
             angka = float(angka)
             
-        # Format ke string dengan 2 desimal, menggunakan koma (,) sebagai pemisah ribuan sementara (standar Python)
-        formatted = f'{angka:,.2f}' # Contoh: 50987.00 menjadi "50,987.00"
+        # Selalu format ke string dengan 2 desimal
+        formatted = f'{angka:,.2f}' # Contoh: 50987.00 menjadi "50,987.00" (di Python)
         
-        # 1. Ganti koma (pemisah ribuan Python) menjadi placeholder 'X'
-        temp_result = formatted.replace(',', 'X')
-        
-        # 2. Ganti titik desimal (.) menjadi koma desimal (,)
-        temp_result = temp_result.replace('.', ',')
-        
-        # 3. Ganti placeholder 'X' (pemisah ribuan) menjadi titik (.)
-        final_result = temp_result.replace('X', '.')
-        
-        # Output saat ini: "50.987,00" (Format Indonesia: Titik Ribuan, Koma Desimal)
-        
-        # KARENA ANDA INGIN PERSIS "50.987.00" (Titik Desimal), kita akan ubah langkah 3 dan 4.
-        
-        # 1. Ganti koma (pemisah ribuan Python) menjadi titik (pemisah ribuan output)
+        # Ganti koma (pemisah ribuan Python) menjadi titik (pemisah ribuan output)
         result = formatted.replace(',', '.') 
         
-        # 2. Ambil string yang sudah dibersihkan dan dipastikan memiliki dua desimal.
-        # Jika input adalah 50987.0, f-string akan menghasilkan '50,987.00' (di Python).
-        # result menjadi '50.987.00'
+        # Output: "50.987.00" (Titik ribuan, Titik desimal)
         return result
         
     except Exception:
-        return str(angka) # Kembalikan sebagai string biasa jika gagal diformat
+        return str(angka) 
+
+# Fungsi Helper 2: Untuk MATERIAL/SATUAN (Tampilkan desimal hanya jika ada)
+def format_satuan_material(angka):
+    """Memformat angka float/int, menampilkan desimal HANYA jika nilainya bukan bilangan bulat."""
+    try:
+        if isinstance(angka, str):
+            angka = float(angka)
+        
+        if angka.is_integer():
+            angka_int = int(angka)
+            # Format tanpa desimal (Contoh: 5.0 -> "5")
+            return f'{angka_int:,}'.replace(',', '.')
+        else:
+            # Format dengan dua desimal jika ada desimal (Contoh: 5.5 -> "5.50")
+            # Kita gunakan format dasar tanpa penggantian ribuan, karena material jarang jutaan
+            return f'{angka:,.2f}'.replace(',', '.') 
+
+    except Exception:
+        return str(angka)
 
 # --- SESSION STATE ---
 if 'lokasi_manual_input' not in st.session_state:
@@ -183,7 +183,7 @@ with col_input:
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
             "Pulau Panci", "Cantung Kiri Hilir", "Sungai Kupang",
-            "Sidomulyo", "Dusun Simpang 3 Quary", "Desa Mitra", "Lainnya (Input Manual)"
+            "Sidomulyo", "Dusun Simpang 3 Quary", "Lainnya (Input Manual)"
         ]
 
         lokasi_select = st.selectbox("Pilih Desa/Lokasi", opsi_lokasi, key="lokasi_select_state")
@@ -213,7 +213,7 @@ with col_input:
         if match:
             nominal_str_raw = match.group(1).strip()
             
-            # --- LOGIKA EKSTRAKSI YANG MEMPERTAHANKAN .00 ---
+            # --- LOGIKA EKSTRAKSI ANGKA ---
             nominal_str_clean = nominal_str_raw
             
             # 1. Cek separator terakhir (yang paling mungkin adalah desimal)
@@ -232,7 +232,6 @@ with col_input:
                 parts[0] = parts[0].replace('.', '').replace(',', '')
                 
                 # Gabungkan kembali: [Angka tanpa ribuan] . [Desimal]
-                # PENTING: Gunakan titik (.) sebagai desimal untuk format Python float
                 nominal_str_clean = parts[0] + '.' + parts[1]
             else:
                 # Tidak ada separator (misal '1000000')
@@ -242,7 +241,6 @@ with col_input:
             nominal_str_clean = nominal_str_clean.replace(',', '.') 
             
             try:
-                # Contoh: Input 50.987.00 -> nominal_str_clean 50987.00 -> jumlah_final 50987.0
                 jumlah_final = float(nominal_str_clean)
             except ValueError:
                 validasi_ekstraksi = False
@@ -286,10 +284,14 @@ with col_input:
                     sheet = client.open_by_key(st.secrets["SHEET_ID"])
                     worksheet = sheet.worksheet(WORKSHEET_NAME)
                     
-                    # --- PEMFORMATAN STRING UNTUK OUTPUT ---
-                    
-                    # Jumlah diformat ke string (contoh: 50.987.00)
-                    jumlah_terformat_string = format_rupiah_manual(jumlah_final) 
+                    # --- PEMFORMATAN STRING UNTUK OUTPUT (KONDISIONAL) ---
+                    if jenis_bantuan_final == "Uang":
+                        # Gunakan pemformatan Uang: Selalu dua desimal
+                        jumlah_terformat_string = format_rupiah_uang(jumlah_final) 
+                    else: 
+                        # Ini mencakup "Semen / Material" dan "Lainnya"
+                        # Gunakan pemformatan Material: Bilangan bulat jika nilainya integer, desimal jika tidak.
+                        jumlah_terformat_string = format_satuan_material(jumlah_final) 
                     
                     # Urutan kolom yang dikirim ke Google Sheets (TANPA KOLOM SATUAN)
                     
@@ -314,6 +316,14 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}") 
 
+# --------------------------
+# DATA VIEW
+# --------------------------
+with col_view:
+    st.subheader("📊 Data Tersimpan")
+    df = load_data()
+
+    if not df.empty:
+        st.dataframe(df, use_container_width=True)
+    else:
         st.info("Belum ada data yang tersimpan.")
-
-
