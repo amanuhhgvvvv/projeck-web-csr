@@ -43,7 +43,6 @@ def format_satuan_material(angka):
             return f'{angka_int:,}'.replace(',', '.')
         else:
             # Format dengan dua desimal jika ada desimal (Contoh: 5.5 -> "5.50")
-            # Kita gunakan format dasar tanpa penggantian ribuan, karena material jarang jutaan
             return f'{angka:,.2f}'.replace(',', '.') 
 
     except Exception:
@@ -166,7 +165,7 @@ with col_input:
         # Contoh placeholder disesuaikan berdasarkan pilihan
         if jenis_bantuan_final == "Uang":
             # Perbarui placeholder: Tekankan penggunaan titik untuk desimal jika itu yang Anda inginkan
-            placeholder_text = "Contoh: 50.987.00 atau 1.000.000" 
+            placeholder_text = "Contoh: Rp50.987.00 atau 1.000.000" 
         elif jenis_bantuan_final == "Semen / Material":
             placeholder_text = "Contoh: 50 Sak atau 2 Ton"
         else:
@@ -201,19 +200,24 @@ with col_input:
         # --- LOGIKA EKSTRAKSI NOMINAL (SATUAN HANYA DIPAKAI UNTUK KONVERSI) ---
         
         jumlah_final = 0.0
+        satuan_untuk_output = "" # VARIABEL BARU UNTUK MENYIMPAN SATUAN ASLI
         satuan_untuk_konversi = ""
         validasi_ekstraksi = True
 
-        # Membersihkan input dari simbol mata uang, dan menormalkan format
+        # Membersihkan input dari simbol mata uang, tetapi tidak menghilangkan spasi yang memisahkan nominal dan satuan
         input_clean = jumlah_dan_satuan_mentah.replace('Rp', '').replace('rp', '').strip()
 
         # Regex mencari nominal (angka/desimal/ribuan) di awal, dan sisanya adalah satuan
-        match = re.match(r"([\d\.\,]+)\s*(.*)?", input_clean)
+        # PENTING: Gunakan raw string r"" untuk regex
+        match = re.match(r"([\d\.\,]+)\s*(.*)?", jumlah_dan_satuan_mentah.strip())
 
         if match:
             nominal_str_raw = match.group(1).strip()
             
-            # --- LOGIKA EKSTRAKSI ANGKA ---
+            # Mendapatkan Satuan untuk Output (misalnya "Ton" atau kosong jika itu Uang)
+            satuan_untuk_output = match.group(2).strip() if match.group(2) else ""
+            
+            # --- LOGIKA EKSTRAKSI ANGKA (Menggunakan input_clean untuk parsing angka) ---
             nominal_str_clean = nominal_str_raw
             
             # 1. Cek separator terakhir (yang paling mungkin adalah desimal)
@@ -246,8 +250,8 @@ with col_input:
                 validasi_ekstraksi = False
             
             # Satuan diekstrak untuk KEPENTINGAN KONVERSI Semen/Material
-            satuan_untuk_konversi = match.group(2).strip() if match.group(2) else ""
-            
+            satuan_untuk_konversi = satuan_untuk_output.lower() # Gunakan satuan_untuk_output
+
             # Jika bukan uang dan satuan masih kosong (misal "50" untuk Semen), itu error
             if jenis_bantuan_final != "Uang" and not satuan_untuk_konversi:
                 validasi_ekstraksi = False
@@ -260,8 +264,12 @@ with col_input:
         
         if jenis_bantuan_final == "Semen / Material":
             # Konversi ke Ton HANYA jika jenis bantuan adalah Semen / Material dan satuan adalah Sak
-            if satuan_untuk_konversi.lower() == "sak":
+            if satuan_untuk_konversi == "sak":
                 jumlah_final = jumlah_final * KONVERSI_SAK_KE_TON
+                
+                # JIKA TERJADI KONVERSI, SATUAN UNTUK OUTPUT DIUBAH MENJADI "Ton"
+                if satuan_untuk_output.lower() == "sak":
+                     satuan_untuk_output = "Ton"
             
         # --- AKHIR LOGIKA KONVERSI ---
 
@@ -274,7 +282,7 @@ with col_input:
         elif st.session_state.jenis_bantuan_key == "Lainnya" and not jenis_bantuan_final:
             st.error("⚠ Jenis Bantuan Lainnya belum diisi.")
         elif not validasi_ekstraksi:
-            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan nominal (contoh: 50.987.00 atau 50 Sak).")
+            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan nominal (contoh: Rp50.987.00 atau 50 Sak).")
         elif jumlah_final <= 0:
             st.error("⚠ Jumlah harus lebih dari nol.")
         else:
@@ -284,14 +292,21 @@ with col_input:
                     sheet = client.open_by_key(st.secrets["SHEET_ID"])
                     worksheet = sheet.worksheet(WORKSHEET_NAME)
                     
-                    # --- PEMFORMATAN STRING UNTUK OUTPUT (KONDISIONAL) ---
+                    # --- PEMFORMATAN STRING UNTUK OUTPUT (KONDISIONAL + SATUAN) ---
                     if jenis_bantuan_final == "Uang":
-                        # Gunakan pemformatan Uang: Selalu dua desimal
-                        jumlah_terformat_string = format_rupiah_uang(jumlah_final) 
+                        # Output: Rp + format uang (Selalu dua desimal)
+                        jumlah_angka_terformat = format_rupiah_uang(jumlah_final) 
+                        jumlah_terformat_string = f"Rp{jumlah_angka_terformat}"
                     else: 
                         # Ini mencakup "Semen / Material" dan "Lainnya"
-                        # Gunakan pemformatan Material: Bilangan bulat jika nilainya integer, desimal jika tidak.
-                        jumlah_terformat_string = format_satuan_material(jumlah_final) 
+                        # Output: Format material (Bilangan bulat jika integer) + Satuan Asli
+                        jumlah_angka_terformat = format_satuan_material(jumlah_final)
+                        
+                        # Gabungkan angka dengan satuan (jika ada)
+                        if satuan_untuk_output:
+                            jumlah_terformat_string = f"{jumlah_angka_terformat} {satuan_untuk_output}"
+                        else:
+                            jumlah_terformat_string = jumlah_angka_terformat
                     
                     # Urutan kolom yang dikirim ke Google Sheets (TANPA KOLOM SATUAN)
                     
@@ -300,7 +315,7 @@ with col_input:
                         pilar,
                         jenis_bantuan_final,
                         uraian,
-                        jumlah_terformat_string, # MENGGANTIKAN KOLOM JUMLAH & SATUAN
+                        jumlah_terformat_string, # MENGANDUNG RP ATAU SATUAN
                         lokasi_final,
                     ]
 
