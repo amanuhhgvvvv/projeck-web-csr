@@ -335,5 +335,5 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}") 
 
-    else:
-        st.info("Belum ada data yang tersimpan.")
+
+
