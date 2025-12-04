@@ -148,7 +148,7 @@ with col_input:
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
             "Pulau Panci", "Cantung Kiri Hilir", "Sungai Kupang",
-            "Sidomulyo", "Dusun Simpang 3 Quary", "Lainnya (Input Manual)"
+            "Sidomulyo", "Dusun Simpang 3 Quary", "Desa Mitra", "Lainnya (Input Manual)"
         ]
 
         lokasi_select = st.selectbox("Pilih Desa/Lokasi", opsi_lokasi, key="lokasi_select_state")
@@ -267,3 +267,4 @@ with col_input:
             except Exception as e:
                 # Ini hanya menangani GAGAL koneksi ke Google Sheets
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}") 
+
