@@ -13,22 +13,40 @@ KONVERSI_SAK_KE_TON = 0.05
 
 # Fungsi Helper untuk Pemformatan Angka ke String dengan Titik sebagai Pemisah Ribuan
 def format_rupiah_manual(angka):
-    """Memformat angka float/int menjadi string dengan titik sebagai pemisah ribuan."""
+    """
+    Memformat angka float/int menjadi string dengan titik sebagai pemisah ribuan
+    dan DUA ANGKA DESIMAL, menggunakan titik sebagai separator desimal.
+    Contoh: 50987.00 -> "50.987.00"
+    """
     try:
         if isinstance(angka, str):
-            # Coba konversi string ke float jika diperlukan
             angka = float(angka)
+            
+        # Format ke string dengan 2 desimal, menggunakan koma (,) sebagai pemisah ribuan sementara (standar Python)
+        formatted = f'{angka:,.2f}' # Contoh: 50987.00 menjadi "50,987.00"
         
-        # Jika nilai adalah bilangan bulat (misal 100000.0), tampilkan tanpa desimal
-        if angka.is_integer():
-            angka_int = int(angka)
-            # Menggunakan f-string formatting dengan koma sebagai pemisah ribuan, lalu ganti koma menjadi titik
-            return f'{angka_int:,}'.replace(',', '.')
-        else:
-            # Jika ada desimal, format dengan dua angka desimal dan titik sebagai pemisah ribuan
-            # Metode penggantian X diperlukan untuk lingkungan non-default locale
-            return f'{angka:,.2f}'.replace(',', 'X').replace('.', ',').replace('X', '.')
-    except:
+        # 1. Ganti koma (pemisah ribuan Python) menjadi placeholder 'X'
+        temp_result = formatted.replace(',', 'X')
+        
+        # 2. Ganti titik desimal (.) menjadi koma desimal (,)
+        temp_result = temp_result.replace('.', ',')
+        
+        # 3. Ganti placeholder 'X' (pemisah ribuan) menjadi titik (.)
+        final_result = temp_result.replace('X', '.')
+        
+        # Output saat ini: "50.987,00" (Format Indonesia: Titik Ribuan, Koma Desimal)
+        
+        # KARENA ANDA INGIN PERSIS "50.987.00" (Titik Desimal), kita akan ubah langkah 3 dan 4.
+        
+        # 1. Ganti koma (pemisah ribuan Python) menjadi titik (pemisah ribuan output)
+        result = formatted.replace(',', '.') 
+        
+        # 2. Ambil string yang sudah dibersihkan dan dipastikan memiliki dua desimal.
+        # Jika input adalah 50987.0, f-string akan menghasilkan '50,987.00' (di Python).
+        # result menjadi '50.987.00'
+        return result
+        
+    except Exception:
         return str(angka) # Kembalikan sebagai string biasa jika gagal diformat
 
 # --- SESSION STATE ---
@@ -147,8 +165,8 @@ with col_input:
         
         # Contoh placeholder disesuaikan berdasarkan pilihan
         if jenis_bantuan_final == "Uang":
-            # Perbarui placeholder untuk mendorong format koma/titik yang benar
-            placeholder_text = "Contoh: 1.000.000 (Satu Juta) atau 1.500,50" 
+            # Perbarui placeholder: Tekankan penggunaan titik untuk desimal jika itu yang Anda inginkan
+            placeholder_text = "Contoh: 50.987.00 atau 1.000.000" 
         elif jenis_bantuan_final == "Semen / Material":
             placeholder_text = "Contoh: 50 Sak atau 2 Ton"
         else:
@@ -195,7 +213,7 @@ with col_input:
         if match:
             nominal_str_raw = match.group(1).strip()
             
-            # --- PERBAIKAN LOGIKA EKSTRAKSI UNTUK MENJAMIN SATU JUTA DIBACA BENAR ---
+            # --- LOGIKA EKSTRAKSI YANG MEMPERTAHANKAN .00 ---
             nominal_str_clean = nominal_str_raw
             
             # 1. Cek separator terakhir (yang paling mungkin adalah desimal)
@@ -204,8 +222,8 @@ with col_input:
                 last_separator = ','
             elif nominal_str_raw.rfind('.') > -1:
                 last_separator = '.'
-
-            # 2. Jika ada separator, asumsikan separator terakhir adalah desimal
+                
+            # 2. Asumsikan separator terakhir adalah desimal
             if last_separator:
                 # Pisahkan berdasarkan separator terakhir
                 parts = nominal_str_raw.rsplit(last_separator, 1)
@@ -214,15 +232,17 @@ with col_input:
                 parts[0] = parts[0].replace('.', '').replace(',', '')
                 
                 # Gabungkan kembali: [Angka tanpa ribuan] . [Desimal]
+                # PENTING: Gunakan titik (.) sebagai desimal untuk format Python float
                 nominal_str_clean = parts[0] + '.' + parts[1]
             else:
                 # Tidak ada separator (misal '1000000')
                 pass
 
-            # 3. Ganti koma ke titik (hanya untuk memastikan, untuk float Python)
+            # 3. Ganti koma ke titik (untuk memastikan format float Python)
             nominal_str_clean = nominal_str_clean.replace(',', '.') 
             
             try:
+                # Contoh: Input 50.987.00 -> nominal_str_clean 50987.00 -> jumlah_final 50987.0
                 jumlah_final = float(nominal_str_clean)
             except ValueError:
                 validasi_ekstraksi = False
@@ -256,7 +276,7 @@ with col_input:
         elif st.session_state.jenis_bantuan_key == "Lainnya" and not jenis_bantuan_final:
             st.error("⚠ Jenis Bantuan Lainnya belum diisi.")
         elif not validasi_ekstraksi:
-            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan nominal (contoh: 1.000.000 atau 50 Sak).")
+            st.error("⚠ Format Jumlah/Nilai tidak valid. Harap masukkan nominal (contoh: 50.987.00 atau 50 Sak).")
         elif jumlah_final <= 0:
             st.error("⚠ Jumlah harus lebih dari nol.")
         else:
@@ -268,7 +288,7 @@ with col_input:
                     
                     # --- PEMFORMATAN STRING UNTUK OUTPUT ---
                     
-                    # Jumlah diformat ke string dengan titik sebagai pemisah ribuan (1.000.000)
+                    # Jumlah diformat ke string (contoh: 50.987.00)
                     jumlah_terformat_string = format_rupiah_manual(jumlah_final) 
                     
                     # Urutan kolom yang dikirim ke Google Sheets (TANPA KOLOM SATUAN)
