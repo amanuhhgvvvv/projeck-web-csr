@@ -182,7 +182,7 @@ with col_input:
         opsi_lokasi = [
             "Tarjun", "Langadai", "Serongga", "Tegal Rejo",
             "Pulau Panci", "Cantung Kiri Hilir", "Sungai Kupang",
-            "Sidomulyo", "Dusun Simpang 3 Quary", "Lainnya (Input Manual)"
+            "Sidomulyo", "Dusun Simpang 3 Quary", "Desa Mitra", "Lainnya (Input Manual)"
         ]
 
         lokasi_select = st.selectbox("Pilih Desa/Lokasi", opsi_lokasi, key="lokasi_select_state")
@@ -342,3 +342,4 @@ with col_view:
         st.dataframe(df, use_container_width=True)
     else:
         st.info("Belum ada data yang tersimpan.")
+
