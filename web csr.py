@@ -3,73 +3,52 @@ import pandas as pd
 import gspread
 from datetime import datetime
 import time
-from google.oauth2.service_account import Credentials
 import re
+from google.oauth2.service_account import Credentials
 
 # --- KONFIGURASI TAMBAHAN ---
 WORKSHEET_NAME = "CSR"
-# Definisikan konversi: Misal, 1 Sak Semen = 0.05 Ton (50 kg)
 KONVERSI_SAK_KE_TON = 0.05
 
-# Fungsi Helper 1: Untuk UANG (Selalu tampil dua desimal)
+# Fungsi Helper (Tetap sama)
 def format_rupiah_uang(angka):
-    """Memformat angka float/int menjadi string dengan titik sebagai pemisah ribuan dan SELALU dua desimal."""
+    # ... (implementasi format_rupiah_uang)
     try:
         if isinstance(angka, str):
             angka = float(angka)
             
-        # Selalu format ke string dengan 2 desimal
         formatted = f'{angka:,.2f}' 
-        
-        # Ganti koma (pemisah ribuan Python) menjadi titik (pemisah ribuan output)
         result = formatted.replace(',', '.') 
-        
-        # Output: "59.000.00"
         return result
-        
     except Exception:
         return str(angka) 
 
-# Fungsi Helper 2: Untuk MATERIAL/SATUAN (Tampilkan desimal hanya jika ada)
 def format_satuan_material(angka):
-    """Memformat angka float/int, menampilkan desimal HANYA jika nilainya bukan bilangan bulat."""
+    # ... (implementasi format_satuan_material)
     try:
         if isinstance(angka, str):
             angka = float(angka)
         
         if angka.is_integer():
             angka_int = int(angka)
-            # Format tanpa desimal (Contoh: 5.0 -> "5")
             return f'{angka_int:,}'.replace(',', '.')
         else:
-            # Format dengan dua desimal jika ada desimal (Contoh: 5.5 -> "5.50")
             return f'{angka:,.2f}'.replace(',', '.') 
-
     except Exception:
         return str(angka)
 
 # --- SESSION STATE ---
-# Kita perlu menginisialisasi semua input yang akan kita reset secara manual di session_state
-if 'lokasi_manual_input' not in st.session_state:
-    st.session_state['lokasi_manual_input'] = ""
+# Hanya menyimpan nilai default, TIDAK ada reset manual
 if 'lokasi_select_state' not in st.session_state:
     st.session_state['lokasi_select_state'] = "Tarjun"
 if 'jenis_bantuan_key' not in st.session_state:
     st.session_state['jenis_bantuan_key'] = "Uang" 
-if 'uraian_key' not in st.session_state:
-    st.session_state['uraian_key'] = ""
-if 'jumlah_satuan_mentah_input' not in st.session_state:
-    st.session_state['jumlah_satuan_mentah_input'] = ""
-if 'jenis_bantuan_manual_key' not in st.session_state:
-    st.session_state['jenis_bantuan_manual_key'] = ""
 
 
 # --- GOOGLE SHEETS CLIENT ---
 @st.cache_resource(ttl=3600)
 def get_gspread_client():
-    # ... (Kode koneksi GSpread tetap sama)
     try:
-        # Menggunakan st.secrets untuk kredensial
         creds = {
             "type": "service_account",
             "project_id": st.secrets["project_id"],
@@ -79,57 +58,37 @@ def get_gspread_client():
             "client_id": st.secrets["client_id"],
             "auth_uri": "https://accounts.google.com/o/oauth2/auth",
             "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/o...certs",
             "client_x509_cert_url": st.secrets["client_x509_cert_url"]
         }
-
         credentials = Credentials.from_service_account_info(
             creds,
             scopes=["https://www.googleapis.com/auth/spreadsheets"]
         )
-
-        client = gspread.authorize(credentials)
-        return client
-
+        return gspread.authorize(credentials)
     except Exception as e:
         st.error(f"Gagal menginisialisasi koneksi Google Sheets. Error: {e}")
         st.stop()
 
-# --- LOAD DATA (tetap sama) ---
+# --- LOAD DATA ---
 @st.cache_data(ttl="10m")
 def load_data():
     try:
         client = get_gspread_client()
         sheet = client.open_by_key(st.secrets["SHEET_ID"])
         worksheet = sheet.worksheet(WORKSHEET_NAME)
-
         data = worksheet.get_all_records()
         df = pd.DataFrame(data)
-        
-        # Membersihkan kolom yang tidak diperlukan
         kolom_hapus = [col for col in df.columns if 'Unnamed:' in col or col == '']
         if kolom_hapus:
             df = df.drop(columns=kolom_hapus)
-
-        # Mengubah kolom Tanggal ke format date
         if "Tanggal" in df.columns:
             df["Tanggal"] = pd.to_datetime(df["Tanggal"], errors='coerce').dt.date
-
         return df
-
     except Exception as e:
         st.error(f"Gagal memuat data dari Google Sheets. Error: {e}")
         return pd.DataFrame()
 
-# --- FUNGSI RESET INPUT MANUAL ---
-def reset_form_inputs():
-    """Mengatur ulang semua input form ke nilai default."""
-    st.session_state['uraian_key'] = ""
-    st.session_state['jumlah_satuan_mentah_input'] = ""
-    st.session_state['lokasi_select_state'] = "Tarjun"
-    st.session_state['lokasi_manual_input'] = ""
-    st.session_state['jenis_bantuan_manual_key'] = ""
-    st.session_state['jenis_bantuan_key'] = "Uang" # Reset radio button
 
 # --- UI ---
 st.set_page_config(page_title="Sistem Pencatatan CSR", layout="wide")
@@ -147,7 +106,8 @@ jenis_bantuan_final = ""
 with col_input:
     st.subheader("📝 Input Data Baru")
 
-    with st.form("form_csr", clear_on_submit=False):
+    # PERUBAHAN: clear_on_submit=False DITINGGALKAN karena tidak ada rerun
+    with st.form("form_csr", clear_on_submit=False): 
         tanggal = st.date_input("Tanggal Kegiatan", datetime.now().date())
 
         opsi_pilar = [
@@ -168,8 +128,7 @@ with col_input:
             jenis_bantuan_manual = st.text_input(
                 "Ketik Jenis Bantuan Lainnya", 
                 placeholder="Contoh: Beras, Kursi, Peralatan Kebersihan",
-                key="jenis_bantuan_manual_key",
-                value=st.session_state['jenis_bantuan_manual_key']
+                key="jenis_bantuan_manual_input_key"
             )
         
         if st.session_state.jenis_bantuan_key == "Lainnya":
@@ -178,26 +137,12 @@ with col_input:
             jenis_bantuan_final = st.session_state.jenis_bantuan_key
 
 
-        uraian = st.text_area(
-            "Uraian Kegiatan", 
-            placeholder="Jelaskan...",
-            key="uraian_key",
-            value=st.session_state['uraian_key']
-        )
-
-        # Contoh placeholder disesuaikan berdasarkan pilihan
-        if jenis_bantuan_final == "Uang":
-            placeholder_text = "Contoh: Rp50.987.00 atau Rp1.000.000" 
-        elif jenis_bantuan_final == "Semen / Material":
-            placeholder_text = "Contoh: 50 Sak atau 2 Ton"
-        else:
-            placeholder_text = "Contoh: 5 Paket atau 10 Liter"
+        uraian = st.text_area("Uraian Kegiatan", placeholder="Jelaskan...", key="uraian_key")
             
         jumlah_dan_satuan_mentah = st.text_input(
             f"Jumlah / Nilai (Masukkan nominal dan satuan)", 
-            placeholder=placeholder_text,
-            key="jumlah_satuan_mentah_input",
-            value=st.session_state['jumlah_satuan_mentah_input']
+            placeholder="Contoh: Rp50.987.00 atau 50 Sak",
+            key="jumlah_satuan_mentah_input"
         )
 
         opsi_lokasi = [
@@ -206,22 +151,12 @@ with col_input:
             "Sidomulyo", "Dusun Simpang 3 Quary", "Lainnya (Input Manual)"
         ]
 
-        lokasi_select = st.selectbox(
-            "Pilih Desa/Lokasi", 
-            opsi_lokasi, 
-            key="lokasi_select_state",
-            index=opsi_lokasi.index(st.session_state['lokasi_select_state'])
-        )
+        lokasi_select = st.selectbox("Pilih Desa/Lokasi", opsi_lokasi, key="lokasi_select_state")
 
         lokasi_manual = ""
         if lokasi_select == "Lainnya (Input Manual)":
-            lokasi_manual = st.text_input(
-                "Ketik Nama Lokasi Baru", 
-                key="lokasi_manual_input",
-                value=st.session_state['lokasi_manual_input']
-            )
+            lokasi_manual = st.text_input("Ketik Nama Lokasi Baru", key="lokasi_manual_input")
 
-        # Tombol Simpan Data
         submitted = st.form_submit_button("💾 Simpan Data")
         
         # --- WADAH KOSONG UNTUK PESAN NOTIFIKASI 2 DETIK ---
@@ -245,11 +180,10 @@ with col_input:
 
         match = re.match(r"([\d\.\,]+)\s*(.*)?", input_untuk_match)
         
+        # ... (Logika ekstraksi, konversi, dan validasi di sini) ...
         if match:
             nominal_str_raw = match.group(1).strip()
-            
             nominal_str_clean = nominal_str_raw
-            
             last_separator = ''
             if nominal_str_raw.rfind(',') > nominal_str_raw.rfind('.'):
                 last_separator = ','
@@ -280,7 +214,7 @@ with col_input:
                 jumlah_final = jumlah_final * KONVERSI_SAK_KE_TON
                 satuan_terekstrak = "Ton"
 
-        # Validasi Input (Diperbarui)
+        # Validasi Input
         if not uraian:
             st.error("⚠ Uraian tidak boleh kosong.")
         elif lokasi_select == "Lainnya (Input Manual)" and not lokasi_final:
@@ -321,17 +255,15 @@ with col_input:
                     worksheet.append_row(new_row)
 
                 # 2. Tampilkan Notifikasi 2 Detik di bawah tombol
-                notification_placeholder.success("BERHASIL")
+                notification_placeholder.success("✅ BERHASIL")
                 time.sleep(2) # Tunggu 2 detik
                 notification_placeholder.empty() # Hapus pesan
 
-                # 3. Reset Form Input secara manual
-                reset_form_inputs()
-                
-                # 4. Clear cache data dan panggil rerun untuk refresh data view di kolom samping
+                # 3. Clear cache data (Data akan dimuat ulang saat F5)
                 load_data.clear()
-                st.rerun() 
+                # st.rerun() dihapus sesuai permintaan
+                
 
             except Exception as e:
+                # Ini hanya menangani GAGAL koneksi ke Google Sheets
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}") 
-
