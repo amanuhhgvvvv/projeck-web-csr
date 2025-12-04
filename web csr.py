@@ -141,7 +141,7 @@ with col_input:
             
         jumlah_dan_satuan_mentah = st.text_input(
             f"Jumlah / Nilai (Masukkan nominal dan satuan)", 
-            placeholder="Contoh: Rp50.987.00 atau 50 Sak",
+            placeholder="Contoh: Rp50.987.00 atau 5 Ton",
             key="jumlah_satuan_mentah_input"
         )
 
