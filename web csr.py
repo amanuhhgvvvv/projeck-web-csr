@@ -314,14 +314,5 @@ with col_input:
             except Exception as e:
                 st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}") 
 
-# --------------------------
-# DATA VIEW
-# --------------------------
-with col_view:
-    st.subheader("📊 Data Tersimpan")
-    df = load_data()
-
-    if not df.empty:
-        st.dataframe(df, use_container_width=True)
-    else:
         st.info("Belum ada data yang tersimpan.")
+
