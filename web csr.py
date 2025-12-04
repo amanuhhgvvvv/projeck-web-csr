@@ -56,6 +56,15 @@ if 'lokasi_select_state' not in st.session_state:
 # Inisialisasi tambahan untuk memastikan key jenis bantuan ada
 if 'jenis_bantuan_key' not in st.session_state:
     st.session_state['jenis_bantuan_key'] = "Uang" 
+    
+# --- SESSSION STATE UNTUK NOTIFIKASI ---
+if 'submission_status' not in st.session_state:
+    st.session_state['submission_status'] = None
+if 'submission_message' not in st.session_state:
+    st.session_state['submission_message'] = ""
+# --- SESSSION STATE BARU UNTUK TANDA CENTANG ---
+if 'show_checkmark' not in st.session_state:
+    st.session_state['show_checkmark'] = False
 
 # --- GOOGLE SHEETS CLIENT ---
 @st.cache_resource(ttl=3600)
@@ -117,6 +126,18 @@ def load_data():
 st.set_page_config(page_title="Sistem Pencatatan CSR", layout="wide")
 st.title("🏭 Bantuan CSR itp p-12 tarjun")
 st.markdown("---")
+
+# --- MENAMPILKAN NOTIFIKASI DARI SESSION STATE ---
+if st.session_state['submission_status'] == 'success':
+    st.success(st.session_state['submission_message'])
+elif st.session_state['submission_status'] == 'error':
+    # Jika ada error dari Google Sheets (bukan validasi input), tampilkan di sini
+    st.error(st.session_state['submission_message'])
+
+# Reset status setelah ditampilkan
+st.session_state['submission_status'] = None
+st.session_state['submission_message'] = ""
+# -------------------------------------------------
 
 col_input, col_view = st.columns([1, 1.5])
 
@@ -192,7 +213,14 @@ with col_input:
             lokasi_manual = st.text_input("Ketik Nama Lokasi Baru", key="lokasi_manual_input")
 
         submitted = st.form_submit_button("💾 Simpan Data")
-
+        
+        # --- TAMPILKAN TANDA CENTANG DI BAWAH TOMBOL JIKA BERHASIL ---
+        if st.session_state.get('show_checkmark'):
+            st.markdown("### ✅") # Tampilkan centang besar
+            # Reset checkmark setelah ditampilkan
+            st.session_state['show_checkmark'] = False
+        # -------------------------------------------------------------
+        
     
     if submitted:
         lokasi_final = lokasi_manual if lokasi_select == "Lainnya (Input Manual)" else lokasi_select
@@ -325,15 +353,29 @@ with col_input:
 
                     worksheet.append_row(new_row)
 
-                st.success(f"✅ Data untuk lokasi *{lokasi_final}* berhasil disimpan!")
-
-                # Clear cache dan refresh halaman untuk menampilkan data baru
+                # SIMPAN STATUS SUKSES & SET CHECKMARK KE TRUE
+                st.session_state['submission_status'] = 'success'
+                st.session_state['submission_message'] = f"✅ Data untuk lokasi *{lokasi_final}* berhasil disimpan!"
+                st.session_state['show_checkmark'] = True # SET INI JADI TRUE
+                
+                # Clear cache dan panggil rerun untuk refresh halaman
                 load_data.clear()
-                # HILANGKAN time.sleep(1) AGAR REFRESH INSTAN
                 st.rerun() 
 
             except Exception as e:
-                st.error(f"Gagal menyimpan data ke Google Sheets. Error: {e}") 
+                # SIMPAN STATUS ERROR
+                st.session_state['submission_status'] = 'error'
+                st.session_state['submission_message'] = f"Gagal menyimpan data ke Google Sheets. Error: {e}"
+                st.error(st.session_state['submission_message'])
 
+# --------------------------
+# DATA VIEW
+# --------------------------
+with col_view:
+    st.subheader("📊 Data Tersimpan")
+    df = load_data()
 
-
+    if not df.empty:
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("Belum ada data yang tersimpan.")
